@@ -15,6 +15,15 @@ const nextConfig: NextConfig = {
       },
     },
   },
+  async redirects() {
+    return [
+      {
+        source: "/",
+        destination: "/dashboard",
+        permanent: false, // Use 307 temporary redirect to facilitate future adjustments
+      },
+    ];
+  },
 };
 
 export default nextConfig;
