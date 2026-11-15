@@ -2,10 +2,8 @@
 
 import * as React from "react";
 
-import { NavDocuments } from "@/components/nav-documents";
 import { NavMain } from "@/components/nav-main";
-import { NavSecondary } from "@/components/nav-secondary";
-import { NavUser } from "@/components/nav-user";
+
 import {
   Sidebar,
   SidebarContent,
@@ -14,13 +12,15 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarGroup,
+  SidebarGroupContent,
 } from "@/components/ui/sidebar";
 import { Authenticated, Unauthenticated } from "convex/react";
 import { SignInButton, SignUpButton, UserButton } from "@clerk/nextjs";
 
 import {
   LayoutDashboardIcon,
-  ListIcon,
+  ListCheck,
   ChartBarIcon,
   FolderIcon,
   UsersIcon,
@@ -33,6 +33,8 @@ import {
   FileChartColumnIcon,
   FileIcon,
   CommandIcon,
+  SquareArrowUpRightExit,
+  InboxIcon,
 } from "lucide-react";
 import { Button } from "./ui/button";
 import Link from "next/link";
@@ -47,112 +49,13 @@ const data = {
   navMain: [
     {
       title: "Dashboard",
-      url: "#",
+      url: "/dashboard",
       icon: <LayoutDashboardIcon />,
     },
-    {
-      title: "Lifecycle",
-      url: "#",
-      icon: <ListIcon />,
-    },
-    {
-      title: "Analytics",
-      url: "#",
-      icon: <ChartBarIcon />,
-    },
-    {
-      title: "Projects",
-      url: "#",
-      icon: <FolderIcon />,
-    },
-    {
-      title: "Team",
-      url: "#",
-      icon: <UsersIcon />,
-    },
   ],
-  navClouds: [
-    {
-      title: "Capture",
-      icon: <CameraIcon />,
-      isActive: true,
-      url: "#",
-      items: [
-        {
-          title: "Active Proposals",
-          url: "#",
-        },
-        {
-          title: "Archived",
-          url: "#",
-        },
-      ],
-    },
-    {
-      title: "Proposal",
-      icon: <FileTextIcon />,
-      url: "#",
-      items: [
-        {
-          title: "Active Proposals",
-          url: "#",
-        },
-        {
-          title: "Archived",
-          url: "#",
-        },
-      ],
-    },
-    {
-      title: "Prompts",
-      icon: <FileTextIcon />,
-      url: "#",
-      items: [
-        {
-          title: "Active Proposals",
-          url: "#",
-        },
-        {
-          title: "Archived",
-          url: "#",
-        },
-      ],
-    },
-  ],
-  navSecondary: [
-    {
-      title: "Settings",
-      url: "#",
-      icon: <Settings2Icon />,
-    },
-    {
-      title: "Get Help",
-      url: "#",
-      icon: <CircleHelpIcon />,
-    },
-    {
-      title: "Search",
-      url: "#",
-      icon: <SearchIcon />,
-    },
-  ],
-  documents: [
-    {
-      name: "Data Library",
-      url: "#",
-      icon: <DatabaseIcon />,
-    },
-    {
-      name: "Reports",
-      url: "#",
-      icon: <FileChartColumnIcon />,
-    },
-    {
-      name: "Word Assistant",
-      url: "#",
-      icon: <FileIcon />,
-    },
-  ],
+  navClouds: [],
+  navSecondary: [],
+  documents: [],
 };
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
@@ -162,11 +65,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <SidebarMenuItem>
             <SidebarMenuButton
               className="data-[slot=sidebar-menu-button]:p-1.5!"
-              render={<a href="#" />}
+              render={<Link href="#" />}
             >
               {/* <CommandIcon className="size-5!" /> */}
               <Image
-                src={"/xcode_logo.png"}
+                src="/xcode_logo.png"
                 alt="lendloop logo"
                 height={20}
                 width={20}
@@ -178,8 +81,39 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={data.navMain} />
-        <NavDocuments items={data.documents} />
-        <NavSecondary items={data.navSecondary} className="mt-auto" />
+
+        {/* Views only available to signed-in users */}
+        <Authenticated>
+          <SidebarGroup>
+            <SidebarGroupContent className="flex flex-col gap-2">
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton render={<Link href="/my-listings" />}>
+                    <ListCheck />
+                    <span>My Listings</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton render={<Link href="/my-requests" />}>
+                    <SquareArrowUpRightExit />
+                    <span>My requests</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    render={<Link href="/incoming-requests" />}
+                  >
+                    <InboxIcon />
+                    <span>Incoming requests</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        </Authenticated>
+
+        {/* <NavDocuments items={data.documents} /> */}
+        {/* <NavSecondary items={data.navSecondary} className="mt-auto" /> */}
       </SidebarContent>
       <SidebarFooter>
         {/* <NavUser user={data.user} /> */}
@@ -190,12 +124,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <Unauthenticated>
           <SignInButton mode="modal">
             <Button variant="outline" size="lg">
-              <Link href={"#"}>Sign in to lend or borrow</Link>
+              <Link href="#">Sign in to lend or borrow</Link>
             </Button>
           </SignInButton>
           {/* <SignUpButton mode="modal">
             <Button variant="outline" size="sm">
-              <Link href={"#"}>Sign up to lend or borrow</Link>
+              <Link href="#">Sign up to lend or borrow</Link>
             </Button>
           </SignUpButton> */}
         </Unauthenticated>

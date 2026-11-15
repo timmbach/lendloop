@@ -8,13 +8,25 @@
  * @module
  */
 
+import type * as authz from "../authz.js";
+import type * as http from "../http.js";
+import type * as loanRequests from "../loanRequests.js";
+import type * as tools from "../tools.js";
+import type * as users from "../users.js";
+
 import type {
   ApiFromModules,
   FilterApi,
   FunctionReference,
 } from "convex/server";
 
-declare const fullApi: ApiFromModules<{}>;
+declare const fullApi: ApiFromModules<{
+  authz: typeof authz;
+  http: typeof http;
+  loanRequests: typeof loanRequests;
+  tools: typeof tools;
+  users: typeof users;
+}>;
 
 /**
  * A utility for referencing Convex functions in your app's public API.
