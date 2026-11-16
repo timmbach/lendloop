@@ -8,6 +8,7 @@ import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { SiteHeader } from "@/components/site-header";
 import { UserProfileInitializer } from "@/components/UserProfileInitializer";
+import { Toaster } from "@/components/ui/sonner";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -56,6 +57,7 @@ export default function RootLayout({
             </ConvexClientProvider>
           </ClerkProvider>
         </ThemeProvider>
+        <Toaster richColors position="top-center" />
       </body>
     </html>
   );

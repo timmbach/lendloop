@@ -67,9 +67,9 @@ export default function DashboardPage() {
       <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
         <div className="flex items-center justify-between px-4 lg:px-6">
           <div>
-            <h1 className="text-2xl font-bold">Available Tools</h1>
+            <h1 className="text-2xl font-bold">Listings Dashboard</h1>
             <p className="text-muted-foreground">
-              Browse tools shared by everyone.
+              Browse tools shared on LendLoop
             </p>
           </div>
         </div>

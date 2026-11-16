@@ -16,7 +16,7 @@ const LoadingSpinner = dynamic(() => import("@/components/LoadingSpinner"), {
   loading: () => <p className="text-muted-foreground">Loading…</p>,
 });
 
-const USE_DUMMY_DATA = true;
+const USE_DUMMY_DATA = false;
 
 type ToolSource = {
   _id: Id<"tools">;
