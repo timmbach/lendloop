@@ -1,12 +1,41 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
-import { requireAuth, requireAdmin, requireOwnership } from "./authz";
+import { requireAuth, requireAdmin } from "./authz";
+import { QueryCtx, MutationCtx } from "./_generated/server";
+import { Id, Doc } from "./_generated/dataModel";
+
+type Ctx = QueryCtx | MutationCtx;
+
+const LoanStatus = v.union(
+  v.literal("pending"),
+  v.literal("approved"),
+  v.literal("declined"),
+  v.literal("returned"),
+  v.literal("cancelled"),
+);
+
+/** Attach tool / owner / borrower names to a loan request. */
+async function withNames(
+  ctx: Ctx,
+  r: Pick<Doc<"loanRequests">, "toolId" | "ownerId" | "borrowerId">,
+) {
+  const [tool, owner, borrower] = await Promise.all([
+    ctx.db.get(r.toolId),
+    ctx.db.get(r.ownerId),
+    ctx.db.get(r.borrowerId),
+  ]);
+  return {
+    toolName: tool?.name ?? "Unknown tool",
+    ownerName: owner?.name ?? "Unknown",
+    borrowerName: borrower?.name ?? "Unknown",
+  };
+}
 
 export const createLoanRequest = mutation({
   args: {
     toolId: v.id("tools"),
-    startDate: v.number(), // Unix ms
-    endDate: v.number(), // Unix ms
+    startDate: v.number(),
+    endDate: v.number(),
   },
   handler: async (ctx, args) => {
     const borrower = await requireAuth(ctx);
@@ -42,10 +71,22 @@ export const approveDeclineLoanRequest = mutation({
     const loan = await ctx.db.get(args.loanRequestId);
     if (!loan) throw new Error("Loan request not found");
 
-    // Only the tool owner (lender) can approve or decline
-    requireOwnership(user._id, loan.ownerId);
+    // Admin can also approve/decline; owner is the normal case.
+    if (loan.ownerId !== user._id && user.role !== "admin") {
+      throw new Error("Forbidden: only the tool owner can respond");
+    }
+
+    // Guard against double-processing
+    if (loan.status !== "pending") {
+      throw new Error("This request has already been handled");
+    }
 
     await ctx.db.patch(loan._id, { status: args.status });
+
+    // Sync tool availability with the decision
+    if (args.status === "approved") {
+      await ctx.db.patch(loan.toolId, { status: "unavailable" });
+    }
   },
 });
 
@@ -56,42 +97,105 @@ export const markReturned = mutation({
     const loan = await ctx.db.get(args.loanRequestId);
     if (!loan) throw new Error("Loan request not found");
 
-    // Only the tool owner can mark as returned
-    requireOwnership(user._id, loan.ownerId);
+    // Owner or borrower can mark returned; admin can too.
+    if (
+      loan.ownerId !== user._id &&
+      loan.borrowerId !== user._id &&
+      user.role !== "admin"
+    ) {
+      throw new Error(
+        "Forbidden: only the lender or borrower can mark returned",
+      );
+    }
+
+    if (loan.status !== "approved") {
+      throw new Error("Only approved loans can be marked returned");
+    }
 
     await ctx.db.patch(loan._id, {
       status: "returned",
       returnedAt: Date.now(),
     });
+
+    // Tool becomes available again
+    await ctx.db.patch(loan.toolId, { status: "available" });
   },
 });
 
-export const getMyLoanRequestsAsBorrower = query({
+export const cancelLoanRequest = mutation({
+  args: { loanRequestId: v.id("loanRequests") },
+  handler: async (ctx, args) => {
+    const user = await requireAuth(ctx);
+    const loan = await ctx.db.get(args.loanRequestId);
+    if (!loan) throw new Error("Loan request not found");
+
+    if (loan.borrowerId !== user._id) {
+      throw new Error("Forbidden: only the borrower can cancel");
+    }
+    if (loan.status !== "pending") {
+      throw new Error("Only pending requests can be cancelled");
+    }
+
+    await ctx.db.patch(loan._id, { status: "cancelled" });
+  },
+});
+
+/** Borrower's view: requests I made, with tool + owner names. */
+export const getMyRequests = query({
   args: {},
   handler: async (ctx) => {
     const user = await requireAuth(ctx);
-    return await ctx.db
+    const requests = await ctx.db
       .query("loanRequests")
       .withIndex("by_borrower", (q) => q.eq("borrowerId", user._id))
       .collect();
+
+    return await Promise.all(
+      requests.map(async (r) => ({
+        ...r,
+        ...(await withNames(ctx, r)),
+      })),
+    );
   },
 });
 
-export const getLoanRequestsOnMyTools = query({
+/** Lender's view: requests on my tools, with tool + borrower names. */
+export const getIncomingRequests = query({
   args: {},
   handler: async (ctx) => {
     const user = await requireAuth(ctx);
-    return await ctx.db
+    const requests = await ctx.db
       .query("loanRequests")
       .withIndex("by_owner", (q) => q.eq("ownerId", user._id))
       .collect();
+
+    return await Promise.all(
+      requests.map(async (r) => ({
+        ...r,
+        ...(await withNames(ctx, r)),
+      })),
+    );
   },
 });
 
-export const getAllLoanRequests = query({
-  args: {},
-  handler: async (ctx) => {
+/** Admin: every loan request, with all names resolved. */
+export const listAllForAdmin = query({
+  args: { status: v.optional(LoanStatus) },
+  handler: async (ctx, args) => {
     await requireAdmin(ctx);
-    return await ctx.db.query("loanRequests").collect();
+
+    const requests = args.status
+      ? await ctx.db
+          .query("loanRequests")
+          .withIndex("by_status", (q) => q.eq("status", args.status!))
+          .collect()
+      : await ctx.db.query("loanRequests").collect();
+
+    return await Promise.all(
+      requests.map(async (r) => ({
+        ...r,
+        ...(await withNames(ctx, r)),
+      })),
+    );
   },
 });

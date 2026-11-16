@@ -1,5 +1,66 @@
-import React from "react";
+"use client";
+
+import { DataTable, type ToolRow } from "@/components/data-table";
+import type { Doc } from "@/convex/_generated/dataModel";
+import { useConvexAuth, useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import rawData from "./data.json";
+
+const USE_DUMMY_DATA = true;
+
+type ToolSource = {
+  _id: string;
+  name: string;
+  category: string;
+  condition: Doc<"tools">["condition"];
+  description: string;
+  status: Doc<"tools">["status"];
+  createdAt: number;
+  ownerName?: string | null;
+};
+
+function toToolRow(t: ToolSource): ToolRow {
+  return {
+    id: t._id,
+    name: t.name,
+    category: t.category,
+    condition: t.condition,
+    description: t.description,
+    status: t.status,
+    createdAt: t.createdAt,
+    ownerName: t.ownerName ?? null,
+  };
+}
 
 export default function MyListingsPage() {
-  return <div>MyListingsPage</div>;
+  const { isAuthenticated } = useConvexAuth();
+
+  const toolsFromConvex = useQuery(
+    api.tools.getMyToolListings,
+    USE_DUMMY_DATA ? "skip" : {},
+  );
+
+  const source: ToolSource[] | undefined = USE_DUMMY_DATA
+    ? (rawData as ToolSource[])
+    : toolsFromConvex;
+
+  if (source === undefined) return <div>Loading…</div>;
+
+  return (
+    <div className="@container/main flex flex-1 flex-col gap-2">
+      <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
+        <div className="px-4 lg:px-6">
+          <h1 className="text-2xl font-bold">My Listings</h1>
+          <p className="text-muted-foreground">
+            Manage the tools you&apos;ve shared.
+          </p>
+        </div>
+        <DataTable
+          data={source.map(toToolRow)}
+          isAuthenticated={isAuthenticated}
+          enableSelection
+        />
+      </div>
+    </div>
+  );
 }

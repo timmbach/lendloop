@@ -169,8 +169,24 @@ const columns = columnHelper.columns([
   }),
   columnHelper.accessor("name", {
     header: "Tool",
-    cell: ({ row }) => <ToolCellViewer item={row.original} />,
     enableHiding: false,
+    cell: ({ row, table }) => {
+      // `table.options.meta` carries our callbacks — see DataTable below
+      const meta = table.options.meta as {
+        isAuthenticated: boolean;
+        onView: (row: ToolRow) => void;
+      };
+      return (
+        <Button
+          variant="link"
+          className="w-fit px-0 text-left text-foreground"
+          onClick={() => meta.isAuthenticated && meta.onView(row.original)}
+          disabled={!meta.isAuthenticated}
+        >
+          {row.original.name}
+        </Button>
+      );
+    },
   }),
   columnHelper.accessor("category", {
     header: "Category",
@@ -228,27 +244,42 @@ const columns = columnHelper.columns([
   }),
   columnHelper.display({
     id: "actions",
-    cell: ({ row }) => (
-      <DropdownMenu>
-        <DropdownMenuTrigger
-          render={
-            <Button
-              variant="ghost"
-              className="flex size-8 text-muted-foreground data-open:bg-muted"
-              size="icon"
-            />
-          }
-        >
-          <EllipsisVerticalIcon />
-          <span className="sr-only">Open menu</span>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-32">
-          <DropdownMenuItem>View details</DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem variant="destructive">Remove</DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    ),
+    cell: ({ row, table }) => {
+      const meta = table.options.meta as {
+        isAuthenticated: boolean;
+        onView: (row: ToolRow) => void;
+        onRemove: (row: ToolRow) => void;
+      };
+      if (!meta.isAuthenticated) return null;
+      return (
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={
+              <Button
+                variant="ghost"
+                className="flex size-8 text-muted-foreground data-open:bg-muted"
+                size="icon"
+              />
+            }
+          >
+            <EllipsisVerticalIcon />
+            <span className="sr-only">Open menu</span>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-32">
+            <DropdownMenuItem onClick={() => meta.onView(row.original)}>
+              View details
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              variant="destructive"
+              onClick={() => meta.onRemove(row.original)}
+            >
+              Remove
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      );
+    },
   }),
 ]);
 
@@ -279,11 +310,15 @@ function DraggableRow({ row }: { row: Row<typeof features, ToolRow> }) {
 export function DataTable({
   data: initialData,
   isAuthenticated,
+  enableSelection = false,
 }: {
   data: ToolRow[];
   isAuthenticated: boolean;
+  enableSelection?: boolean;
 }) {
   const [data, setData] = React.useState(() => initialData);
+  const [selectedTool, setSelectedTool] = React.useState<ToolRow | null>(null);
+  const [detailsOpen, setDetailsOpen] = React.useState(false);
   const [rowSelection, setRowSelection] = React.useState({});
   const [columnVisibility, setColumnVisibility] =
     React.useState<ColumnVisibilityState>({});
@@ -305,15 +340,36 @@ export function DataTable({
     () => data?.map(({ id }) => id) || [],
     [data],
   );
-  const visibleColumns = React.useMemo(
-    () =>
-      isAuthenticated ? columns : columns.filter((c) => c.id !== "ownerName"),
+  const visibleColumns = React.useMemo(() => {
+    let cols = columns as typeof columns;
+    if (!isAuthenticated) {
+      cols = cols.filter(
+        (c) => c.id !== "ownerName" && c.id !== "actions",
+      ) as typeof columns;
+    }
+    if (!enableSelection) {
+      cols = cols.filter((c) => c.id !== "select") as typeof columns;
+    }
+    return cols;
+  }, [isAuthenticated, enableSelection]);
+  const handleView = React.useCallback(
+    (row: ToolRow) => {
+      if (!isAuthenticated) return;
+      setSelectedTool(row);
+      setDetailsOpen(true);
+    },
     [isAuthenticated],
   );
+
+  const handleRemove = React.useCallback((row: ToolRow) => {
+    // wire to api.tools.remove later
+    console.log("remove", row.id);
+  }, []);
   const table = useTable({
     features,
     data,
     columns: visibleColumns,
+    meta: { isAuthenticated, onView: handleView, onRemove: handleRemove },
     state: {
       sorting,
       columnVisibility,
@@ -322,7 +378,7 @@ export function DataTable({
       pagination,
     },
     getRowId: (row) => row.id,
-    enableRowSelection: true,
+    enableRowSelection: enableSelection,
     onRowSelectionChange: setRowSelection,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
@@ -414,7 +470,7 @@ export function DataTable({
                 ) : (
                   <TableRow>
                     <TableCell
-                      colSpan={columns.length}
+                      colSpan={visibleColumns.length}
                       className="h-24 text-center"
                     >
                       No tools listed yet.
@@ -427,10 +483,12 @@ export function DataTable({
         </div>
 
         <div className="flex items-center justify-between px-4">
-          <div className="hidden flex-1 text-sm text-muted-foreground lg:flex">
-            {table.getFilteredSelectedRowModel().rows.length} of{" "}
-            {table.getFilteredRowModel().rows.length} row(s) selected.
-          </div>
+          {enableSelection && (
+            <div className="hidden flex-1 text-sm text-muted-foreground lg:flex">
+              {table.getFilteredSelectedRowModel().rows.length} of{" "}
+              {table.getFilteredRowModel().rows.length} row(s) selected.
+            </div>
+          )}
           <div className="flex w-full items-center gap-8 lg:w-fit">
             <div className="hidden items-center gap-2 lg:flex">
               <Label htmlFor="rows-per-page" className="text-sm font-medium">
@@ -506,24 +564,36 @@ export function DataTable({
           </div>
         </div>
       </div>
+      <ToolDetailsDrawer
+        item={selectedTool}
+        open={detailsOpen}
+        onOpenChange={setDetailsOpen}
+        isAuthenticated={isAuthenticated}
+      />
     </div>
   );
 }
 
-function ToolCellViewer({ item }: { item: ToolRow }) {
+function ToolDetailsDrawer({
+  item,
+  open,
+  onOpenChange,
+  isAuthenticated,
+}: {
+  item: ToolRow | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  isAuthenticated: boolean;
+}) {
   const isMobile = useIsMobile();
+  if (!item || !isAuthenticated) return null;
+
   return (
-    <Drawer swipeDirection={isMobile ? "down" : "right"}>
-      <DrawerTrigger
-        render={
-          <Button
-            variant="link"
-            className="w-fit px-0 text-left text-foreground"
-          />
-        }
-      >
-        {item.name}
-      </DrawerTrigger>
+    <Drawer
+      open={open}
+      onOpenChange={onOpenChange}
+      swipeDirection={isMobile ? "down" : "right"}
+    >
       <DrawerContent>
         <DrawerHeader className="gap-1">
           <DrawerTitle>{item.name}</DrawerTitle>

@@ -1,6 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
-import { requireAuth, requireAdmin, requireOwnership } from "./authz";
+import { requireAuth, requireOwnerOrAdmin } from "./authz";
 
 const ToolCondition = v.union(
   v.literal("new"),
@@ -45,9 +45,8 @@ export const editToolListing = mutation({
     const tool = await ctx.db.get(args.toolId);
     if (!tool) throw new Error("Tool not found");
 
-    if (tool.ownerId !== user._id && user.role !== "admin") {
-      throw new Error("Forbidden: you can only edit your own tools");
-    }
+    requireOwnerOrAdmin(user, tool.ownerId); // ← replaced
+
     const updates = {
       ...(args.name !== undefined ? { name: args.name } : {}),
       ...(args.category !== undefined ? { category: args.category } : {}),
@@ -67,9 +66,7 @@ export const deleteToolListing = mutation({
     const tool = await ctx.db.get(args.toolId);
     if (!tool) throw new Error("Tool not found");
 
-    if (tool.ownerId !== user._id && user.role !== "admin") {
-      throw new Error("Forbidden: you can only delete your own tools");
-    }
+    requireOwnerOrAdmin(user, tool.ownerId);
 
     await ctx.db.patch(args.toolId, { status: "deleted" });
   },
@@ -86,9 +83,7 @@ export const setToolAvailability = mutation({
     const tool = await ctx.db.get(args.toolId);
     if (!tool) throw new Error("Tool not found");
 
-    if (tool.ownerId !== user._id && user.role !== "admin") {
-      throw new Error("Forbidden: you can only manage your own tools");
-    }
+    requireOwnerOrAdmin(user, tool.ownerId); // ← replaced
 
     await ctx.db.patch(args.toolId, {
       status: args.available ? "available" : "unavailable",
@@ -127,58 +122,6 @@ export const getToolListingById = query({
     return tool;
   },
 });
-
-// export const getAllToolListings = query({
-//   args: { category: v.optional(v.string()) },
-//   handler: async (ctx, args) => {
-//     await requireAuth(ctx);
-
-//     let tools;
-//     if (args.category) {
-//       tools = await ctx.db
-//         .query("tools")
-//         .withIndex("by_category", (q) => q.eq("category", args.category!))
-//         .collect();
-//     } else {
-//       tools = await ctx.db
-//         .query("tools")
-//         .withIndex("by_status", (q) => q.eq("status", "available"))
-//         .collect();
-//     }
-
-//     // Always exclude soft-deleted tools
-//     return tools.filter((t) => t.status !== "deleted");
-//   },
-// });
-
-// export const getAllToolListings = query({
-//   args: { category: v.optional(v.string()) },
-//   handler: async (ctx, args) => {
-//     await requireAuth(ctx);
-
-//     let tools;
-//     if (args.category) {
-//       tools = await ctx.db
-//         .query("tools")
-//         .withIndex("by_category", (q) => q.eq("category", args.category!))
-//         .collect();
-//     } else {
-//       tools = await ctx.db
-//         .query("tools")
-//         .withIndex("by_status", (q) => q.eq("status", "available"))
-//         .collect();
-//     }
-
-//     const visible = tools.filter((t) => t.status !== "deleted");
-
-//     return await Promise.all(
-//       visible.map(async (t) => {
-//         const owner = await ctx.db.get(t.ownerId);
-//         return { ...t, ownerName: owner?.name ?? "Unknown" };
-//       }),
-//     );
-//   },
-// });
 
 export const getAllToolListings = query({
   args: { category: v.optional(v.string()) },
