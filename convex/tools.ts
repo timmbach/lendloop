@@ -128,25 +128,91 @@ export const getToolListingById = query({
   },
 });
 
+// export const getAllToolListings = query({
+//   args: { category: v.optional(v.string()) },
+//   handler: async (ctx, args) => {
+//     await requireAuth(ctx);
+
+//     let tools;
+//     if (args.category) {
+//       tools = await ctx.db
+//         .query("tools")
+//         .withIndex("by_category", (q) => q.eq("category", args.category!))
+//         .collect();
+//     } else {
+//       tools = await ctx.db
+//         .query("tools")
+//         .withIndex("by_status", (q) => q.eq("status", "available"))
+//         .collect();
+//     }
+
+//     // Always exclude soft-deleted tools
+//     return tools.filter((t) => t.status !== "deleted");
+//   },
+// });
+
+// export const getAllToolListings = query({
+//   args: { category: v.optional(v.string()) },
+//   handler: async (ctx, args) => {
+//     await requireAuth(ctx);
+
+//     let tools;
+//     if (args.category) {
+//       tools = await ctx.db
+//         .query("tools")
+//         .withIndex("by_category", (q) => q.eq("category", args.category!))
+//         .collect();
+//     } else {
+//       tools = await ctx.db
+//         .query("tools")
+//         .withIndex("by_status", (q) => q.eq("status", "available"))
+//         .collect();
+//     }
+
+//     const visible = tools.filter((t) => t.status !== "deleted");
+
+//     return await Promise.all(
+//       visible.map(async (t) => {
+//         const owner = await ctx.db.get(t.ownerId);
+//         return { ...t, ownerName: owner?.name ?? "Unknown" };
+//       }),
+//     );
+//   },
+// });
+
 export const getAllToolListings = query({
   args: { category: v.optional(v.string()) },
   handler: async (ctx, args) => {
-    await requireAuth(ctx);
+    const identity = await ctx.auth.getUserIdentity();
+    const isAuthenticated = identity !== null;
 
-    let tools;
-    if (args.category) {
-      tools = await ctx.db
-        .query("tools")
-        .withIndex("by_category", (q) => q.eq("category", args.category!))
-        .collect();
-    } else {
-      tools = await ctx.db
+    const [available, unavailable] = await Promise.all([
+      ctx.db
         .query("tools")
         .withIndex("by_status", (q) => q.eq("status", "available"))
-        .collect();
+        .collect(),
+      ctx.db
+        .query("tools")
+        .withIndex("by_status", (q) => q.eq("status", "unavailable"))
+        .collect(),
+    ]);
+
+    const all = [...available, ...unavailable];
+
+    const visible = args.category
+      ? all.filter((t) => t.category === args.category)
+      : all;
+
+    if (!isAuthenticated) {
+      // Anonymous: never return owner identity
+      return visible.map((t) => ({ ...t, ownerName: null }));
     }
 
-    // Always exclude soft-deleted tools
-    return tools.filter((t) => t.status !== "deleted");
+    return await Promise.all(
+      visible.map(async (t) => {
+        const owner = await ctx.db.get(t.ownerId);
+        return { ...t, ownerName: owner?.name ?? "Unknown" };
+      }),
+    );
   },
 });
