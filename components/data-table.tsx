@@ -23,7 +23,6 @@ import { CSS } from "@dnd-kit/utilities";
 import {
   columnFilteringFeature,
   columnVisibilityFeature,
-  createColumnHelper,
   createFilteredRowModel,
   createPaginatedRowModel,
   createSortedRowModel,
@@ -33,32 +32,25 @@ import {
   rowSortingFeature,
   tableFeatures,
   useTable,
+  type ColumnDef,
   type ColumnFiltersState,
   type ColumnVisibilityState,
   type Row,
   type SortingState,
 } from "@tanstack/react-table";
 
-import { useIsMobile } from "@/hooks/use-mobile";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Drawer,
   DrawerClose,
   DrawerContent,
-  DrawerDescription,
   DrawerFooter,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerTrigger,
 } from "@/components/ui/drawer";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Label } from "@/components/ui/label";
@@ -80,9 +72,6 @@ import {
 } from "@/components/ui/table";
 import {
   GripVerticalIcon,
-  CircleCheckIcon,
-  CircleXIcon,
-  EllipsisVerticalIcon,
   Columns3Icon,
   ChevronDownIcon,
   ChevronsLeftIcon,
@@ -91,19 +80,7 @@ import {
   ChevronsRightIcon,
 } from "lucide-react";
 
-// ---------------------------------------------------------------------------
-// Row type: exactly the shape the dashboard query returns (plus a string id)
-// ---------------------------------------------------------------------------
-export type ToolRow = {
-  id: string; // mapped from Convex _id
-  name: string;
-  category: string;
-  condition: "new" | "like_new" | "good" | "fair" | "poor";
-  description: string;
-  status: "available" | "unavailable" | "deleted";
-  createdAt: number;
-  ownerName: string | null; // resolved on the server (see listAll query)
-};
+export type BaseRow = { id: string };
 
 const features = tableFeatures({
   columnFilteringFeature,
@@ -116,9 +93,22 @@ const features = tableFeatures({
   sortedRowModel: createSortedRowModel(),
 });
 
-const columnHelper = createColumnHelper<typeof features, ToolRow>();
+export type DataTableFeatures = typeof features;
 
-function DragHandle({ id }: { id: string }) {
+export type DataTableColumn<T extends BaseRow> = ColumnDef<
+  DataTableFeatures,
+  T
+>;
+
+export type DataTableMeta<T extends BaseRow> = {
+  isAuthenticated: boolean;
+  isAdmin: boolean;
+  currentUserId: string | null;
+  onView: (row: T) => void;
+  onRemove?: (row: T) => void;
+};
+
+export function DragHandle({ id }: { id: string }) {
   const { attributes, listeners } = useSortable({ id });
   return (
     <Button
@@ -134,13 +124,41 @@ function DragHandle({ id }: { id: string }) {
   );
 }
 
-const columns = columnHelper.columns([
-  columnHelper.display({
+function DraggableRow<T extends BaseRow>({
+  row,
+}: {
+  row: Row<DataTableFeatures, T>;
+}) {
+  const { transform, transition, setNodeRef, isDragging } = useSortable({
+    id: row.original.id,
+  });
+  return (
+    <TableRow
+      data-state={row.getIsSelected() && "selected"}
+      data-dragging={isDragging}
+      ref={setNodeRef}
+      className="relative z-0 data-[dragging=true]:z-10 data-[dragging=true]:opacity-80"
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+    >
+      {row.getVisibleCells().map((cell) => (
+        <TableCell key={cell.id}>
+          <FlexRender cell={cell} />
+        </TableCell>
+      ))}
+    </TableRow>
+  );
+}
+
+export function DragColumn<T extends BaseRow>(): DataTableColumn<T> {
+  return {
     id: "drag",
     header: () => null,
     cell: ({ row }) => <DragHandle id={row.original.id} />,
-  }),
-  columnHelper.display({
+  };
+}
+
+export function SelectColumn<T extends BaseRow>(): DataTableColumn<T> {
+  return {
     id: "select",
     header: ({ table }) => (
       <div className="flex items-center justify-center">
@@ -166,158 +184,38 @@ const columns = columnHelper.columns([
     ),
     enableSorting: false,
     enableHiding: false,
-  }),
-  columnHelper.accessor("name", {
-    header: "Tool",
-    enableHiding: false,
-    cell: ({ row, table }) => {
-      // `table.options.meta` carries our callbacks — see DataTable below
-      const meta = table.options.meta as {
-        isAuthenticated: boolean;
-        onView: (row: ToolRow) => void;
-      };
-      return (
-        <Button
-          variant="link"
-          className="w-fit px-0 text-left text-foreground"
-          onClick={() => meta.isAuthenticated && meta.onView(row.original)}
-          disabled={!meta.isAuthenticated}
-        >
-          {row.original.name}
-        </Button>
-      );
-    },
-  }),
-  columnHelper.accessor("category", {
-    header: "Category",
-    cell: ({ row }) => (
-      <Badge
-        variant="outline"
-        className="px-1.5 capitalize text-muted-foreground"
-      >
-        {row.original.category}
-      </Badge>
-    ),
-  }),
-  columnHelper.accessor("condition", {
-    header: "Condition",
-    cell: ({ row }) => (
-      <Badge
-        variant="outline"
-        className="px-1.5 capitalize text-muted-foreground"
-      >
-        {row.original.condition.replace("_", " ")}
-      </Badge>
-    ),
-  }),
-  columnHelper.accessor("status", {
-    header: "Status",
-    cell: ({ row }) => {
-      const status = row.original.status;
-      return (
-        <Badge
-          variant="outline"
-          className="px-1.5 capitalize text-muted-foreground"
-        >
-          {status === "available" ? (
-            <CircleCheckIcon className="fill-green-500 dark:fill-green-400" />
-          ) : (
-            <CircleXIcon className="text-muted-foreground" />
-          )}
-          {status}
-        </Badge>
-      );
-    },
-  }),
-  columnHelper.accessor("ownerName", {
-    id: "ownerName",
-    header: "Owner",
-    cell: ({ row }) => row.original.ownerName ?? "—",
-  }),
-  columnHelper.accessor("createdAt", {
-    header: "Listed",
-    cell: ({ row }) => (
-      <span className="text-muted-foreground">
-        {new Date(row.original.createdAt).toLocaleDateString()}
-      </span>
-    ),
-  }),
-  columnHelper.display({
-    id: "actions",
-    cell: ({ row, table }) => {
-      const meta = table.options.meta as {
-        isAuthenticated: boolean;
-        onView: (row: ToolRow) => void;
-        onRemove: (row: ToolRow) => void;
-      };
-      if (!meta.isAuthenticated) return null;
-      return (
-        <DropdownMenu>
-          <DropdownMenuTrigger
-            render={
-              <Button
-                variant="ghost"
-                className="flex size-8 text-muted-foreground data-open:bg-muted"
-                size="icon"
-              />
-            }
-          >
-            <EllipsisVerticalIcon />
-            <span className="sr-only">Open menu</span>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-32">
-            <DropdownMenuItem onClick={() => meta.onView(row.original)}>
-              View details
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              variant="destructive"
-              onClick={() => meta.onRemove(row.original)}
-            >
-              Remove
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      );
-    },
-  }),
-]);
-
-function DraggableRow({ row }: { row: Row<typeof features, ToolRow> }) {
-  const { transform, transition, setNodeRef, isDragging } = useSortable({
-    id: row.original.id,
-  });
-  return (
-    <TableRow
-      data-state={row.getIsSelected() && "selected"}
-      data-dragging={isDragging}
-      ref={setNodeRef}
-      className="relative z-0 data-[dragging=true]:z-10 data-[dragging=true]:opacity-80"
-      style={{
-        transform: CSS.Transform.toString(transform),
-        transition,
-      }}
-    >
-      {row.getVisibleCells().map((cell) => (
-        <TableCell key={cell.id}>
-          <FlexRender cell={cell} />
-        </TableCell>
-      ))}
-    </TableRow>
-  );
+  };
 }
 
-export function DataTable({
-  data: initialData,
-  isAuthenticated,
-  enableSelection = false,
-}: {
-  data: ToolRow[];
+export type DataTableProps<T extends BaseRow> = {
+  data: T[];
+  columns: DataTableColumn<T>[];
   isAuthenticated: boolean;
+  isAdmin: boolean;
+  currentUserId: string | null;
   enableSelection?: boolean;
-}) {
-  const [data, setData] = React.useState(() => initialData);
-  const [selectedTool, setSelectedTool] = React.useState<ToolRow | null>(null);
+  onView?: (row: T) => void;
+  onRemove?: (row: T) => void;
+  renderDetails?: (row: T) => React.ReactNode;
+  emptyMessage?: string;
+  meta?: Record<string, unknown>;
+};
+
+export function DataTable<T extends BaseRow>({
+  data: initialData,
+  columns,
+  isAuthenticated,
+  isAdmin,
+  currentUserId,
+  enableSelection = false,
+  onView,
+  onRemove,
+  renderDetails,
+  emptyMessage = "No results.",
+  meta,
+}: DataTableProps<T>) {
+  const [data, setData] = React.useState<T[]>(() => initialData);
+  const [selectedRow, setSelectedRow] = React.useState<T | null>(null);
   const [detailsOpen, setDetailsOpen] = React.useState(false);
   const [rowSelection, setRowSelection] = React.useState({});
   const [columnVisibility, setColumnVisibility] =
@@ -337,39 +235,43 @@ export function DataTable({
     useSensor(KeyboardSensor, {}),
   );
   const dataIds = React.useMemo<UniqueIdentifier[]>(
-    () => data?.map(({ id }) => id) || [],
+    () => data.map(({ id }) => id),
     [data],
   );
-  const visibleColumns = React.useMemo(() => {
-    let cols = columns as typeof columns;
+
+  const visibleColumns = React.useMemo<DataTableColumn<T>[]>(() => {
+    let cols: DataTableColumn<T>[] = columns;
     if (!isAuthenticated) {
-      cols = cols.filter(
-        (c) => c.id !== "ownerName" && c.id !== "actions",
-      ) as typeof columns;
+      cols = cols.filter((c) => c.id !== "ownerName" && c.id !== "actions");
     }
     if (!enableSelection) {
-      cols = cols.filter((c) => c.id !== "select") as typeof columns;
+      cols = cols.filter((c) => c.id !== "select");
     }
     return cols;
-  }, [isAuthenticated, enableSelection]);
+  }, [columns, isAuthenticated, enableSelection]);
+
   const handleView = React.useCallback(
-    (row: ToolRow) => {
+    (row: T) => {
       if (!isAuthenticated) return;
-      setSelectedTool(row);
+      setSelectedRow(row);
       setDetailsOpen(true);
+      onView?.(row);
     },
-    [isAuthenticated],
+    [isAuthenticated, onView],
   );
 
-  const handleRemove = React.useCallback((row: ToolRow) => {
-    // wire to api.tools.remove later
-    console.log("remove", row.id);
-  }, []);
   const table = useTable({
     features,
     data,
     columns: visibleColumns,
-    meta: { isAuthenticated, onView: handleView, onRemove: handleRemove },
+    meta: {
+      isAuthenticated,
+      isAdmin,
+      currentUserId,
+      onView: handleView,
+      onRemove,
+      ...meta,
+    },
     state: {
       sorting,
       columnVisibility,
@@ -389,10 +291,10 @@ export function DataTable({
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
     if (active && over && active.id !== over.id) {
-      setData((data) => {
+      setData((prev) => {
         const oldIndex = dataIds.indexOf(active.id);
         const newIndex = dataIds.indexOf(over.id);
-        return arrayMove(data, oldIndex, newIndex);
+        return arrayMove(prev, oldIndex, newIndex);
       });
     }
   }
@@ -400,38 +302,32 @@ export function DataTable({
   return (
     <div className="flex w-full flex-col gap-4">
       <div className="flex items-center justify-between px-4 lg:px-6">
-        <div className="flex items-center gap-2">
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              render={<Button variant="outline" size="sm" />}
-            >
-              <Columns3Icon data-icon="inline-start" />
-              Columns
-              <ChevronDownIcon data-icon="inline-end" />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-40">
-              {table
-                .getAllColumns()
-                .filter(
-                  (column) =>
-                    typeof column.accessorFn !== "undefined" &&
-                    column.getCanHide(),
-                )
-                .map((column) => (
-                  <DropdownMenuCheckboxItem
-                    key={column.id}
-                    className="capitalize"
-                    checked={column.getIsVisible()}
-                    onCheckedChange={(value) =>
-                      column.toggleVisibility(!!value)
-                    }
-                  >
-                    {column.id}
-                  </DropdownMenuCheckboxItem>
-                ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger render={<Button variant="outline" size="sm" />}>
+            <Columns3Icon data-icon="inline-start" />
+            Columns
+            <ChevronDownIcon data-icon="inline-end" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-40">
+            {table
+              .getAllColumns()
+              .filter(
+                (column) =>
+                  typeof column.accessorFn !== "undefined" &&
+                  column.getCanHide(),
+              )
+              .map((column) => (
+                <DropdownMenuCheckboxItem
+                  key={column.id}
+                  className="capitalize"
+                  checked={column.getIsVisible()}
+                  onCheckedChange={(value) => column.toggleVisibility(!!value)}
+                >
+                  {column.id}
+                </DropdownMenuCheckboxItem>
+              ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       <div className="relative flex flex-col gap-4 overflow-auto px-4 lg:px-6">
@@ -473,7 +369,7 @@ export function DataTable({
                       colSpan={visibleColumns.length}
                       className="h-24 text-center"
                     >
-                      No tools listed yet.
+                      {emptyMessage}
                     </TableCell>
                   </TableRow>
                 )}
@@ -489,7 +385,7 @@ export function DataTable({
               {table.getFilteredRowModel().rows.length} row(s) selected.
             </div>
           )}
-          <div className="flex w-full items-center gap-8 lg:w-fit">
+          <div className="ml-auto flex w-full items-center gap-8 lg:flex-1">
             <div className="hidden items-center gap-2 lg:flex">
               <Label htmlFor="rows-per-page" className="text-sm font-medium">
                 Rows per page
@@ -564,58 +460,23 @@ export function DataTable({
           </div>
         </div>
       </div>
-      <ToolDetailsDrawer
-        item={selectedTool}
-        open={detailsOpen}
-        onOpenChange={setDetailsOpen}
-        isAuthenticated={isAuthenticated}
-      />
+
+      {renderDetails && selectedRow && isAuthenticated && (
+        <Drawer
+          open={detailsOpen}
+          onOpenChange={setDetailsOpen}
+          swipeDirection="right"
+        >
+          <DrawerContent>
+            {renderDetails(selectedRow)}
+            <DrawerFooter>
+              <DrawerClose render={<Button variant="outline" />}>
+                Close
+              </DrawerClose>
+            </DrawerFooter>
+          </DrawerContent>
+        </Drawer>
+      )}
     </div>
-  );
-}
-
-function ToolDetailsDrawer({
-  item,
-  open,
-  onOpenChange,
-  isAuthenticated,
-}: {
-  item: ToolRow | null;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  isAuthenticated: boolean;
-}) {
-  const isMobile = useIsMobile();
-  if (!item || !isAuthenticated) return null;
-
-  return (
-    <Drawer
-      open={open}
-      onOpenChange={onOpenChange}
-      swipeDirection={isMobile ? "down" : "right"}
-    >
-      <DrawerContent>
-        <DrawerHeader className="gap-1">
-          <DrawerTitle>{item.name}</DrawerTitle>
-          <DrawerDescription>
-            {item.category} · {item.condition.replace("_", " ")} · listed{" "}
-            {new Date(item.createdAt).toLocaleDateString()}
-          </DrawerDescription>
-        </DrawerHeader>
-        <div className="flex flex-col gap-4 overflow-y-auto px-4 text-sm">
-          <p>{item.description}</p>
-          <div className="flex items-center gap-2">
-            <span className="text-muted-foreground">Owner:</span>
-            <span>{item.ownerName ?? "—"}</span>
-          </div>
-          <Badge variant="outline" className="w-fit capitalize">
-            {item.status}
-          </Badge>
-        </div>
-        <DrawerFooter>
-          <DrawerClose render={<Button variant="outline" />}>Close</DrawerClose>
-        </DrawerFooter>
-      </DrawerContent>
-    </Drawer>
   );
 }

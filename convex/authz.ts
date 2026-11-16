@@ -1,7 +1,5 @@
-// convex/authz.ts
 import { QueryCtx, MutationCtx } from "./_generated/server";
-import { Id } from "./_generated/dataModel";
-import { Doc } from "./_generated/dataModel";
+import { Id, Doc } from "./_generated/dataModel";
 
 type Ctx = QueryCtx | MutationCtx;
 type Role = "admin" | "user";
@@ -11,15 +9,12 @@ type Role = "admin" | "user";
  * Throws if not authenticated or if the user hasn't been synced.
  */
 export async function requireAuth(ctx: Ctx): Promise<Doc<"users">> {
-  const identity = await ctx.auth.getUserIdentity(); // <-- must await
+  const identity = await ctx.auth.getUserIdentity();
   if (!identity) throw new Error("Not authenticated");
 
   const user = await ctx.db
     .query("users")
-    .withIndex(
-      "by_clerk_id",
-      (q) => q.eq("clerkId", identity.tokenIdentifier), // stable, globally unique
-    )
+    .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
     .first();
 
   if (!user) throw new Error("User not found in database");

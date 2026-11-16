@@ -21,18 +21,6 @@ import { SignInButton, SignUpButton, UserButton } from "@clerk/nextjs";
 import {
   LayoutDashboardIcon,
   ListCheck,
-  ChartBarIcon,
-  FolderIcon,
-  UsersIcon,
-  CameraIcon,
-  FileTextIcon,
-  Settings2Icon,
-  CircleHelpIcon,
-  SearchIcon,
-  DatabaseIcon,
-  FileChartColumnIcon,
-  FileIcon,
-  CommandIcon,
   SquareArrowUpRightExit,
   InboxIcon,
 } from "lucide-react";
@@ -40,7 +28,7 @@ import { Button } from "./ui/button";
 import Link from "next/link";
 import Image from "next/image";
 
-const data = {
+export const data = {
   user: {
     name: "shadcn",
     email: "m@example.com",
@@ -51,11 +39,27 @@ const data = {
       title: "Dashboard",
       url: "/dashboard",
       icon: <LayoutDashboardIcon />,
+      requiresAuth: false,
+    },
+    {
+      title: "My Listings",
+      url: "/my-listings",
+      icon: <ListCheck />,
+      requiresAuth: true,
+    },
+    {
+      title: "My requests",
+      url: "/my-requests",
+      icon: <SquareArrowUpRightExit />,
+      requiresAuth: true,
+    },
+    {
+      title: "Incoming requests",
+      url: "/incoming-requests",
+      icon: <InboxIcon />,
+      requiresAuth: true,
     },
   ],
-  navClouds: [],
-  navSecondary: [],
-  documents: [],
 };
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
@@ -69,51 +73,18 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             >
               {/* <CommandIcon className="size-5!" /> */}
               <Image
-                src="/xcode_logo.png"
+                src="/lendloop_brand.png"
                 alt="lendloop logo"
                 height={20}
-                width={20}
+                width={100}
               />
-              <span className="text-base font-semibold">LendLoop</span>
+              {/* <span className="text-base font-semibold">LendLoop</span> */}
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={data.navMain} />
-
-        {/* Views only available to signed-in users */}
-        <Authenticated>
-          <SidebarGroup>
-            <SidebarGroupContent className="flex flex-col gap-2">
-              <SidebarMenu>
-                <SidebarMenuItem>
-                  <SidebarMenuButton render={<Link href="/my-listings" />}>
-                    <ListCheck />
-                    <span>My Listings</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton render={<Link href="/my-requests" />}>
-                    <SquareArrowUpRightExit />
-                    <span>My requests</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    render={<Link href="/incoming-requests" />}
-                  >
-                    <InboxIcon />
-                    <span>Incoming requests</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        </Authenticated>
-
-        {/* <NavDocuments items={data.documents} /> */}
-        {/* <NavSecondary items={data.navSecondary} className="mt-auto" /> */}
       </SidebarContent>
       <SidebarFooter>
         {/* <NavUser user={data.user} /> */}

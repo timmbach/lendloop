@@ -7,6 +7,7 @@
     "description": "Lightly used cordless drill with two batteries and charger.",
     "status": "available",
     "ownerName": null,
+    "ownerId": null,
     "createdAt": 1700000000000
   },
   {
@@ -17,6 +18,7 @@
     "description": "Gas-powered push mower, works great for small yards.",
     "status": "available",
     "ownerName": null,
+    "ownerId": null,
     "createdAt": 1700100000000
   },
   {
@@ -27,6 +29,7 @@
     "description": "5-quart stand mixer, barely used. Includes whisk and dough hook.",
     "status": "available",
     "ownerName": "Sarah Chen",
+    "ownerId": "user_3",
     "createdAt": 1700200000000
   },
   {
@@ -37,6 +40,7 @@
     "description": "Waterproof dome tent, used once. Comes with stakes and rainfly.",
     "status": "unavailable",
     "ownerName": "Carlos Rodriguez",
+    "ownerId": "user_4",
     "createdAt": 1700300000000
   },
   {
@@ -47,6 +51,7 @@
     "description": "Works but the blade guard is sticky. Needs maintenance.",
     "status": "available",
     "ownerName": "Eddie Lake",
+    "ownerId": "user_1",
     "createdAt": 1700400000000
   },
   {
@@ -57,6 +62,7 @@
     "description": "Electric hedge trimmer, still in original packaging.",
     "status": "available",
     "ownerName": "Maya Johnson",
+    "ownerId": "user_5",
     "createdAt": 1700500000000
   },
   {
@@ -67,6 +73,7 @@
     "description": "5.8-quart air fryer, used twice.",
     "status": "available",
     "ownerName": "Leila Ahmadi",
+    "ownerId": "user_6",
     "createdAt": 1700600000000
   },
   {
@@ -77,6 +84,7 @@
     "description": "Two synthetic sleeping bags rated to 30°F.",
     "status": "available",
     "ownerName": "Thomas Wilson",
+    "ownerId": "user_7",
     "createdAt": 1700700000000
   },
   {
@@ -87,6 +95,7 @@
     "description": "Backpack leaf blower, slightly loud but powerful.",
     "status": "unavailable",
     "ownerName": "Jamik Tashpulatov",
+    "ownerId": "user_2",
     "createdAt": 1700800000000
   },
   {
@@ -97,6 +106,7 @@
     "description": "Electric pressure washer, 2000 PSI, perfect for driveways.",
     "status": "available",
     "ownerName": "Eddie Lake",
+    "ownerId": "user_1",
     "createdAt": 1700900000000
   },
   {
@@ -107,6 +117,7 @@
     "description": "Aluminum step ladder, good for home repairs.",
     "status": "available",
     "ownerName": "Sarah Chen",
+    "ownerId": "user_3",
     "createdAt": 1701000000000
   },
   {
@@ -117,6 +128,7 @@
     "description": "Burr coffee grinder, stainless steel.",
     "status": "available",
     "ownerName": "Maya Johnson",
+    "ownerId": "user_5",
     "createdAt": 1701100000000
   },
   {
@@ -127,6 +139,7 @@
     "description": "Waterproof Bluetooth speaker, 20-hour battery.",
     "status": "available",
     "ownerName": "Leila Ahmadi",
+    "ownerId": "user_6",
     "createdAt": 1701200000000
   },
   {
@@ -137,6 +150,7 @@
     "description": "Old model, sometimes gives false positives.",
     "status": "available",
     "ownerName": "Thomas Wilson",
+    "ownerId": "user_7",
     "createdAt": 1701300000000
   },
   {
@@ -147,6 +161,7 @@
     "description": "Sharp bypass pruning shears, barely used.",
     "status": "available",
     "ownerName": "Carlos Rodriguez",
+    "ownerId": "user_4",
     "createdAt": 1701400000000
   }
 ]

@@ -1,15 +1,26 @@
 "use client";
 
-import { DataTable, type ToolRow } from "@/components/data-table";
-import type { Doc } from "@/convex/_generated/dataModel";
-import { useConvexAuth, useQuery } from "convex/react";
+import type { Doc, Id } from "@/convex/_generated/dataModel";
+import { useConvexAuth, useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import rawData from "./data.json";
+import { DataTable } from "@/components/data-table";
+import {
+  ToolDetails,
+  toolColumns,
+  type ToolRow,
+} from "@/components/tools-table";
+import rawData from "../dashboard/data.json";
+import dynamic from "next/dynamic";
+
+const LoadingSpinner = dynamic(() => import("@/components/LoadingSpinner"), {
+  loading: () => <p className="text-muted-foreground">Loading…</p>,
+});
 
 const USE_DUMMY_DATA = true;
 
 type ToolSource = {
-  _id: string;
+  _id: Id<"tools">;
+  ownerId: Id<"users">;
   name: string;
   category: string;
   condition: Doc<"tools">["condition"];
@@ -22,18 +33,21 @@ type ToolSource = {
 function toToolRow(t: ToolSource): ToolRow {
   return {
     id: t._id,
+    ownerId: t.ownerId,
     name: t.name,
     category: t.category,
     condition: t.condition,
     description: t.description,
     status: t.status,
     createdAt: t.createdAt,
-    ownerName: t.ownerName ?? null,
+    ownerName: "Me",
   };
 }
 
 export default function MyListingsPage() {
   const { isAuthenticated } = useConvexAuth();
+  const me = useQuery(api.users.getMe);
+  const removeTool = useMutation(api.tools.deleteToolListing);
 
   const toolsFromConvex = useQuery(
     api.tools.getMyToolListings,
@@ -44,7 +58,14 @@ export default function MyListingsPage() {
     ? (rawData as ToolSource[])
     : toolsFromConvex;
 
-  if (source === undefined) return <div>Loading…</div>;
+  if (source === undefined)
+    return (
+      <LoadingSpinner
+        width={48}
+        height={48}
+        message="Loading your listings..."
+      />
+    );
 
   return (
     <div className="@container/main flex flex-1 flex-col gap-2">
@@ -55,10 +76,19 @@ export default function MyListingsPage() {
             Manage the tools you&apos;ve shared.
           </p>
         </div>
+      </div>
+
+      <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
         <DataTable
           data={source.map(toToolRow)}
+          columns={toolColumns}
           isAuthenticated={isAuthenticated}
+          isAdmin={me?.role === "admin"}
+          currentUserId={me?._id ?? null}
           enableSelection
+          onRemove={(row) => removeTool({ toolId: row.id })}
+          renderDetails={(row) => <ToolDetails item={row} />}
+          emptyMessage="You haven't listed any tools yet."
         />
       </div>
     </div>

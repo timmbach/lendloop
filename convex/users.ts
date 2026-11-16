@@ -20,9 +20,7 @@ export const ensureUserProfile = mutation({
 
     const existing = await ctx.db
       .query("users")
-      .withIndex("by_clerk_id", (q) =>
-        q.eq("clerkId", identity.tokenIdentifier),
-      )
+      .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
       .first();
 
     if (existing) {
@@ -37,7 +35,7 @@ export const ensureUserProfile = mutation({
     }
 
     const _id = await ctx.db.insert("users", {
-      clerkId: identity.tokenIdentifier,
+      clerkId: identity.subject,
       role: "user",
       name,
       email,
@@ -59,6 +57,24 @@ export const getMyProfile = query({
       name: user.name,
       email: user.email,
       trustedLender: user.trustedLender,
+    };
+  },
+});
+export const getMe = query({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return null;
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
+      .first();
+    if (!user) return null;
+    return {
+      _id: user._id,
+      role: user.role,
+      name: user.name,
+      trustedLender: user.trustedLender ?? false,
     };
   },
 });
