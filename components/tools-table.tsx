@@ -24,6 +24,7 @@ import {
   type DataTableMeta,
 } from "@/components/data-table";
 import { Id } from "@/convex/_generated/dataModel";
+import Image from "next/image";
 
 export type ToolRow = {
   id: Id<"tools">;
@@ -35,6 +36,7 @@ export type ToolRow = {
   status: "available" | "unavailable" | "deleted";
   createdAt: number;
   ownerName: string | null;
+  imageUrl: string | null;
 };
 
 const columnHelper = createColumnHelper<DataTableFeatures, ToolRow>();
@@ -165,7 +167,7 @@ export const toolColumns: DataTableColumn<ToolRow>[] = columnHelper.columns([
 
 export function ToolDetails({ item }: { item: ToolRow }) {
   return (
-    <>
+    <div className="py-6">
       <div className="px-4">
         <h3 className="text-lg font-semibold">{item.name}</h3>
         <p className="text-sm text-muted-foreground">
@@ -173,16 +175,31 @@ export function ToolDetails({ item }: { item: ToolRow }) {
           {new Date(item.createdAt).toLocaleDateString()}
         </p>
       </div>
+
       <div className="flex flex-col gap-4 overflow-y-auto px-4 text-sm">
+        {item.imageUrl && (
+          <div className="relative aspect-video w-full overflow-hidden rounded-md border">
+            <Image
+              src={item.imageUrl}
+              alt={item.name}
+              fill
+              sizes="(max-width: 768px) 100vw, 480px"
+              className="object-cover"
+            />
+          </div>
+        )}
+
         <p>{item.description}</p>
+
         <div className="flex items-center gap-2">
           <span className="text-muted-foreground">Owner:</span>
           <span>{item.ownerName ?? "—"}</span>
         </div>
+
         <Badge variant="outline" className="w-fit capitalize">
           {item.status}
         </Badge>
       </div>
-    </>
+    </div>
   );
 }

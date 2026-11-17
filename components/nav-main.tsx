@@ -12,7 +12,7 @@ import {
 import { CirclePlusIcon, MailIcon } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useConvexAuth } from "convex/react";
-import { LendToolDialog } from "./lend-tool-dialog";
+import { ListToolDialog } from "./list-tool-dialog";
 
 type NavItem = {
   title: string;
@@ -35,15 +35,15 @@ export function NavMain({ items }: { items: NavItem[] }) {
         <SidebarMenu>
           {isAuthenticated && (
             <SidebarMenuItem className="flex items-center gap-2">
-              <LendToolDialog>
+              <ListToolDialog>
                 <SidebarMenuButton
-                  tooltip="Lend a tool"
+                  tooltip="List a tool"
                   className="min-w-8 bg-primary font-medium text-primary-foreground duration-200 ease-linear hover:bg-primary/90 hover:text-primary-foreground active:bg-primary/90 active:text-primary-foreground"
                 >
                   <CirclePlusIcon />
-                  <span>Lend a tool</span>
+                  <span>List a tool</span>
                 </SidebarMenuButton>
-              </LendToolDialog>
+              </ListToolDialog>
             </SidebarMenuItem>
           )}
         </SidebarMenu>

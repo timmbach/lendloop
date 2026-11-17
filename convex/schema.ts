@@ -27,6 +27,7 @@ export default defineSchema({
       v.literal("unavailable"),
       v.literal("deleted"),
     ),
+    imageId: v.id("_storage"),
     createdAt: v.number(),
   })
     .index("by_owner", ["ownerId"])

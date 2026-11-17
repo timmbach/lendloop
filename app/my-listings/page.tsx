@@ -28,6 +28,7 @@ type ToolSource = {
   status: Doc<"tools">["status"];
   createdAt: number;
   ownerName?: string | null;
+  imageUrl?: string | null;
 };
 
 function toToolRow(t: ToolSource): ToolRow {
@@ -41,24 +42,25 @@ function toToolRow(t: ToolSource): ToolRow {
     status: t.status,
     createdAt: t.createdAt,
     ownerName: "Me",
+    imageUrl: t.imageUrl ?? null,
   };
 }
 
 export default function MyListingsPage() {
-  const { isAuthenticated } = useConvexAuth();
+  const { isAuthenticated, isLoading } = useConvexAuth();
   const me = useQuery(api.users.getMe);
   const removeTool = useMutation(api.tools.deleteToolListing);
 
   const toolsFromConvex = useQuery(
     api.tools.getMyToolListings,
-    USE_DUMMY_DATA ? "skip" : {},
+    isAuthenticated ? {} : "skip",
   );
 
   const source: ToolSource[] | undefined = USE_DUMMY_DATA
     ? (rawData as ToolSource[])
     : toolsFromConvex;
 
-  if (source === undefined)
+  if (isLoading || source === undefined)
     return (
       <LoadingSpinner
         width={48}

@@ -24,6 +24,7 @@ type ToolSource = {
   status: Doc<"tools">["status"];
   createdAt: number;
   ownerName?: string | null;
+  imageUrl?: string | null;
 };
 
 function toToolRow(t: ToolSource): ToolRow {
@@ -37,6 +38,7 @@ function toToolRow(t: ToolSource): ToolRow {
     status: t.status,
     createdAt: t.createdAt,
     ownerName: t.ownerName ?? null,
+    imageUrl: t.imageUrl ?? null,
   };
 }
 
@@ -45,7 +47,7 @@ const LoadingSpinner = dynamic(() => import("@/components/LoadingSpinner"), {
 });
 
 export default function DashboardPage() {
-  const { isAuthenticated } = useConvexAuth();
+  const { isAuthenticated, isLoading } = useConvexAuth();
   const me = useQuery(api.users.getMe);
 
   const toolsFromConvex = useQuery(
@@ -57,7 +59,7 @@ export default function DashboardPage() {
     ? (rawData as ToolSource[])
     : toolsFromConvex;
 
-  if (source === undefined)
+  if (isLoading || source === undefined)
     return (
       <LoadingSpinner width={48} height={48} message="Loading listings..." />
     );

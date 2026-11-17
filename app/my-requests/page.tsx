@@ -16,7 +16,7 @@ const LoadingSpinner = dynamic(() => import("@/components/LoadingSpinner"), {
 });
 
 export default function MyRequestsPage() {
-  const { isAuthenticated } = useConvexAuth();
+  const { isAuthenticated, isLoading } = useConvexAuth();
   const me = useQuery(api.users.getMe);
   const cancel = useMutation(api.loanRequests.cancelLoanRequest);
   const markReturned = useMutation(api.loanRequests.markReturned);
@@ -26,7 +26,7 @@ export default function MyRequestsPage() {
     isAuthenticated ? {} : "skip",
   );
 
-  if (requests === undefined)
+  if (isLoading || requests === undefined)
     return (
       <LoadingSpinner
         width={48}
