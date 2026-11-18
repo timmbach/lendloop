@@ -6,7 +6,6 @@ import { ThemeProvider } from "@/components/ThemeProvider";
 import ConvexClientProvider from "@/components/ConvexClientProvider";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
-import { SiteHeader } from "@/components/site-header";
 import { UserProfileInitializer } from "@/components/UserProfileInitializer";
 import { Toaster } from "@/components/ui/sonner";
 
@@ -50,7 +49,7 @@ export default function RootLayout({
               >
                 <AppSidebar variant="inset" />
                 <SidebarInset>
-                  <SiteHeader />
+                  {/* <SiteHeader /> */}
                   <main className="flex-1 overflow-y-auto p-4">{children}</main>
                 </SidebarInset>
               </SidebarProvider>

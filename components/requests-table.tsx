@@ -89,6 +89,19 @@ export function buildRequestColumns(
     columnHelper.accessor("toolName", {
       header: "Tool",
       enableHiding: false,
+      cell: ({ row, table }) => {
+        const meta = table.options.meta as DataTableMeta<RequestRow>;
+        return (
+          <Button
+            variant="link"
+            className="w-fit px-0 text-left text-foreground"
+            onClick={() => meta.isAuthenticated && meta.onView(row.original)}
+            disabled={!meta.isAuthenticated}
+          >
+            {row.original.toolName}
+          </Button>
+        );
+      },
     }),
     columnHelper.accessor(
       variant === "borrower" ? "ownerName" : "borrowerName",
@@ -146,8 +159,7 @@ export function buildRequestColumns(
 
         const canApprove = !!handleApprove && isOwner && isPending;
         const canDecline = !!handleDecline && isOwner && isPending;
-        const canMarkReturned =
-          !!handleMarkReturned && (isOwner || isBorrower) && isApproved;
+        const canMarkReturned = !!handleMarkReturned && isOwner && isApproved;
         const canCancel = !!handleCancel && isBorrower && isPending;
 
         const hasAny = canApprove || canDecline || canMarkReturned || canCancel;
@@ -203,9 +215,15 @@ export function buildRequestColumns(
   ]);
 }
 
-export function RequestDetails({ item }: { item: RequestRow }) {
+export function RequestDetails({
+  item,
+  onMarkReturned,
+}: {
+  item: RequestRow;
+  onMarkReturned?: (row: RequestRow) => void;
+}) {
   return (
-    <>
+    <div className="py-6">
       <div className="px-4">
         <h3 className="text-lg font-semibold">{item.toolName}</h3>
         <p className="text-sm text-muted-foreground">
@@ -222,7 +240,12 @@ export function RequestDetails({ item }: { item: RequestRow }) {
           <span>{item.borrowerName}</span>
         </div>
         <StatusBadge status={item.status} />
+        {onMarkReturned && item.status !== "returned" && (
+          <Button onClick={() => onMarkReturned(item)} className="w-full">
+            Mark returned
+          </Button>
+        )}
       </div>
-    </>
+    </div>
   );
 }

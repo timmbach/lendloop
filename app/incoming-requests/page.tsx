@@ -24,6 +24,46 @@ export default function IncomingRequestsPage() {
     isAuthenticated ? {} : "skip",
   );
 
+  const handleApprove = async (row: RequestRow) => {
+    try {
+      await approveDecline({
+        loanRequestId: row.id,
+        status: "approved",
+      });
+      toast.success("Request approved");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to approve");
+    }
+  };
+
+  const handleDecline = async (row: RequestRow) => {
+    try {
+      await approveDecline({
+        loanRequestId: row.id,
+        status: "declined",
+      });
+      toast.success("Request declined");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to decline");
+    }
+  };
+
+  const handleMarkReturned = async (row: RequestRow) => {
+    if (row.status === "returned")
+      return toast.info("You've already marked this tool as returned");
+    if (row.status !== "approved") {
+      return toast.info("You're yet to approve this loan");
+    }
+    try {
+      await markReturned({ loanRequestId: row.id });
+      toast.success("Marked as returned");
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "Failed to mark returned",
+      );
+    }
+  };
+
   if (isLoading || requests === undefined)
     return (
       <LoadingSpinner width={48} height={48} message="Loading requests..." />
@@ -60,46 +100,13 @@ export default function IncomingRequestsPage() {
           isAdmin={me?.role === "admin"}
           currentUserId={me?._id ?? null}
           enableSelection
-          renderDetails={(row) => <RequestDetails item={row} />}
+          renderDetails={(row) => (
+            <RequestDetails item={row} onMarkReturned={handleMarkReturned} />
+          )}
           meta={{
-            onApprove: async (row: RequestRow) => {
-              try {
-                await approveDecline({
-                  loanRequestId: row.id,
-                  status: "approved",
-                });
-                toast.success("Request approved");
-              } catch (err) {
-                toast.error(
-                  err instanceof Error ? err.message : "Failed to approve",
-                );
-              }
-            },
-            onDecline: async (row: RequestRow) => {
-              try {
-                await approveDecline({
-                  loanRequestId: row.id,
-                  status: "declined",
-                });
-                toast.success("Request declined");
-              } catch (err) {
-                toast.error(
-                  err instanceof Error ? err.message : "Failed to decline",
-                );
-              }
-            },
-            onMarkReturned: async (row: RequestRow) => {
-              try {
-                await markReturned({ loanRequestId: row.id });
-                toast.success("Marked as returned");
-              } catch (err) {
-                toast.error(
-                  err instanceof Error
-                    ? err.message
-                    : "Failed to mark returned",
-                );
-              }
-            },
+            onApprove: handleApprove,
+            onDecline: handleDecline,
+            onMarkReturned: handleMarkReturned,
           }}
           emptyMessage="No incoming requests yet."
         />

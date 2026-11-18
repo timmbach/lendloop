@@ -89,7 +89,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarFooter>
         {/* <NavUser user={data.user} /> */}
         <Authenticated>
-          <UserButton />
+          <UserButton showName />
+
           {/* <Content /> */}
         </Authenticated>
         <Unauthenticated>

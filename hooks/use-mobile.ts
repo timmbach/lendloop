@@ -1,19 +1,25 @@
-import * as React from "react"
+import { useEffect, useState } from "react";
 
-const MOBILE_BREAKPOINT = 768
+const MOBILE_BREAKPOINT = 768;
+const QUERY = `(max-width: ${MOBILE_BREAKPOINT - 1}px)`;
 
 export function useIsMobile() {
-  const [isMobile, setIsMobile] = React.useState<boolean | undefined>(undefined)
+  // Lazy initializer: computed once on the client during first render.
+  // On the server (no window), defaults to false.
+  const [isMobile, setIsMobile] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return window.matchMedia(QUERY).matches;
+  });
 
-  React.useEffect(() => {
-    const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`)
-    const onChange = () => {
-      setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
-    }
-    mql.addEventListener("change", onChange)
-    setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
-    return () => mql.removeEventListener("change", onChange)
-  }, [])
+  useEffect(() => {
+    const mql = window.matchMedia(QUERY);
+    const onChange = (e: MediaQueryListEvent) => setIsMobile(e.matches);
 
-  return !!isMobile
+    // Subscribe to future changes. The initial value already came from
+    // the lazy initializer, so no setState is needed here.
+    mql.addEventListener("change", onChange);
+    return () => mql.removeEventListener("change", onChange);
+  }, []);
+
+  return isMobile;
 }
