@@ -7,6 +7,7 @@ import {
   CircleCheckIcon,
   CircleXIcon,
   EllipsisVerticalIcon,
+  ShieldCheckIcon,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -36,6 +37,7 @@ export type ToolRow = {
   status: "available" | "unavailable" | "deleted";
   createdAt: number;
   ownerName: string | null;
+  ownerTrusted: boolean;
   imageUrl: string | null;
 };
 
@@ -102,7 +104,17 @@ export const toolColumns: DataTableColumn<ToolRow>[] = columnHelper.columns([
   columnHelper.accessor("ownerName", {
     id: "ownerName",
     header: "Owner",
-    cell: ({ row }) => row.original.ownerName ?? "—",
+    cell: ({ row }) => (
+      <div className="flex items-center gap-2">
+        <span>{row.original.ownerName ?? "—"}</span>
+        {row.original.ownerTrusted && (
+          <Badge variant="outline" className="gap-1">
+            <ShieldCheckIcon className="size-3" />
+            Trusted
+          </Badge>
+        )}
+      </div>
+    ),
   }),
   columnHelper.accessor("createdAt", {
     header: "Listed",
@@ -119,6 +131,7 @@ export const toolColumns: DataTableColumn<ToolRow>[] = columnHelper.columns([
       if (!meta.isAuthenticated) return null;
 
       const handleView = meta.onView;
+      const handleEdit = meta.onEdit;
       const handleRemove = meta.onRemove;
       const handleRequestBorrow = meta.onRequestBorrow;
 
@@ -127,6 +140,7 @@ export const toolColumns: DataTableColumn<ToolRow>[] = columnHelper.columns([
         row.original.ownerId === meta.currentUserId;
       const isAvailable = row.original.status === "available";
 
+      const canEdit = !!handleEdit && (meta.isAdmin || isOwner);
       const canRemove = !!handleRemove && (meta.isAdmin || isOwner);
       const canRequest = !!handleRequestBorrow && !isOwner && isAvailable;
 
@@ -150,6 +164,11 @@ export const toolColumns: DataTableColumn<ToolRow>[] = columnHelper.columns([
             {handleView && (
               <DropdownMenuItem onClick={() => handleView(row.original)}>
                 View details
+              </DropdownMenuItem>
+            )}
+            {canEdit && (
+              <DropdownMenuItem onClick={() => handleEdit(row.original)}>
+                Edit
               </DropdownMenuItem>
             )}
             {canRequest && (
@@ -187,7 +206,7 @@ export function ToolDetails({
   onRequestBorrow?: () => void;
 }) {
   return (
-    <>
+    <div className="py-6">
       <div className="px-4">
         <h3 className="text-lg font-semibold">{item.name}</h3>
         <p className="text-sm text-muted-foreground">
@@ -195,7 +214,7 @@ export function ToolDetails({
           {new Date(item.createdAt).toLocaleDateString()}
         </p>
       </div>
-      <div className="flex flex-col gap-4 overflow-y-auto px-4 text-sm">
+      <div className="flex flex-col gap-4 overflow-y-auto p-4 text-sm">
         {item.imageUrl && (
           <div className="relative aspect-video w-full overflow-hidden rounded-md border">
             <Image
@@ -208,10 +227,19 @@ export function ToolDetails({
           </div>
         )}
         <p>{item.description}</p>
-        <div className="flex items-center gap-2">
-          <span className="text-muted-foreground">Owner:</span>
-          <span>{item.ownerName ?? "—"}</span>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <span className="text-muted-foreground">Owner:</span>
+            <span>{item.ownerName ?? "—"}</span>
+          </div>
+          {item.ownerTrusted && (
+            <Badge variant="outline" className="gap-1 w-fit">
+              <ShieldCheckIcon className="size-3" />
+              Trusted
+            </Badge>
+          )}
         </div>
+
         <Badge variant="outline" className="w-fit capitalize">
           {item.status}
         </Badge>
@@ -221,6 +249,6 @@ export function ToolDetails({
           </Button>
         )}
       </div>
-    </>
+    </div>
   );
 }

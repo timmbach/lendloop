@@ -150,19 +150,23 @@ export const getAvailableToolListings = query({
   },
 });
 
-export const getToolListingById = query({
-  args: { toolId: v.id("tools") },
-  handler: async (ctx, args) => {
-    await requireAuth(ctx);
-    const tool = await ctx.db.get(args.toolId);
-    if (!tool) throw new Error("Tool not found");
+// export const getToolListingById = query({
+//   args: { toolId: v.id("tools") },
+//   handler: async (ctx, args) => {
+//     await requireAuth(ctx);
+//     const tool = await ctx.db.get(args.toolId);
+//     if (!tool) throw new Error("Tool not found");
 
-    return {
-      ...tool,
-      imageUrl: await resolveImageUrl(ctx, tool.imageId),
-    };
-  },
-});
+//     const owner = await ctx.db.get(tool.ownerId);
+
+//     return {
+//       ...tool,
+//       ownerName: owner?.name ?? "Unknown",
+//       ownerTrusted: owner?.trustedLender ?? false,
+//       imageUrl: await resolveImageUrl(ctx, tool.imageId),
+//     };
+//   },
+// });
 
 export const getAllToolListings = query({
   args: { category: v.optional(v.string()) },
@@ -206,6 +210,7 @@ export const getAllToolListings = query({
       return visible.map((t) => ({
         ...t,
         ownerName: null,
+        ownerTrusted: false,
         imageUrl: null,
       }));
     }
@@ -216,6 +221,7 @@ export const getAllToolListings = query({
         return {
           ...t,
           ownerName: owner?.name ?? "Unknown",
+          ownerTrusted: owner?.trustedLender ?? false,
           imageUrl: await resolveImageUrl(ctx, t.imageId),
         };
       }),

@@ -105,6 +105,7 @@ export type DataTableMeta<T extends BaseRow> = {
   isAdmin: boolean;
   currentUserId: string | null;
   onView: (row: T) => void;
+  onEdit?: (row: T) => void;
   onRemove?: (row: T) => void;
   onRequestBorrow?: (row: T) => void;
   onApprove?: (row: T) => void;
@@ -205,6 +206,7 @@ export type DataTableProps<T extends BaseRow> = {
   emptyMessage?: string;
   meta?: Record<string, unknown>;
   onRequestBorrow?: (row: T) => void;
+  onEdit?: (row: T) => void;
 };
 
 export function DataTable<T extends BaseRow>({
@@ -216,12 +218,22 @@ export function DataTable<T extends BaseRow>({
   enableSelection = false,
   onView,
   onRemove,
+  onEdit,
   onRequestBorrow,
   renderDetails,
   emptyMessage = "No results.",
   meta,
 }: DataTableProps<T>) {
-  const [data, setData] = React.useState<T[]>(() => initialData);
+  const [override, setOverride] = React.useState<T[] | null>(null);
+  const [prevSource, setPrevSource] = React.useState(initialData);
+
+  if (prevSource !== initialData) {
+    setPrevSource(initialData);
+    setOverride(null);
+  }
+
+  const data = override ?? initialData;
+
   const [selectedRow, setSelectedRow] = React.useState<T | null>(null);
   const [detailsOpen, setDetailsOpen] = React.useState(false);
   const [rowSelection, setRowSelection] = React.useState({});
@@ -276,6 +288,7 @@ export function DataTable<T extends BaseRow>({
       isAdmin,
       currentUserId,
       onView: handleView,
+      onEdit,
       onRemove,
       onRequestBorrow,
       ...meta,
@@ -299,11 +312,9 @@ export function DataTable<T extends BaseRow>({
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
     if (active && over && active.id !== over.id) {
-      setData((prev) => {
-        const oldIndex = dataIds.indexOf(active.id);
-        const newIndex = dataIds.indexOf(over.id);
-        return arrayMove(prev, oldIndex, newIndex);
-      });
+      const oldIndex = dataIds.indexOf(active.id);
+      const newIndex = dataIds.indexOf(over.id);
+      setOverride(arrayMove(data, oldIndex, newIndex));
     }
   }
 

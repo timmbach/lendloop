@@ -11,23 +11,29 @@ import {
 } from "@/components/ui/sidebar";
 import { CirclePlusIcon, MailIcon } from "lucide-react";
 import { usePathname } from "next/navigation";
-import { useConvexAuth } from "convex/react";
+import { useConvexAuth, useQuery } from "convex/react";
 import { ListToolDialog } from "./list-tool-dialog";
+import { api } from "@/convex/_generated/api";
 
 type NavItem = {
   title: string;
   url: string;
   icon?: React.ReactNode;
   requiresAuth?: boolean;
+  requiresAdmin?: boolean;
 };
 
 export function NavMain({ items }: { items: NavItem[] }) {
   const pathname = usePathname();
   const { isAuthenticated } = useConvexAuth();
+  const me = useQuery(api.users.getMe, {});
+  const isAdmin = me?.role === "admin";
 
-  const visibleItems = items.filter(
-    (item) => !item.requiresAuth || isAuthenticated,
-  );
+  const visibleItems = items.filter((item) => {
+    if (item.requiresAdmin) return isAdmin;
+    if (item.requiresAuth) return isAuthenticated;
+    return true;
+  });
 
   return (
     <SidebarGroup>

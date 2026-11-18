@@ -23,6 +23,7 @@ import {
   ListCheck,
   SquareArrowUpRightExit,
   InboxIcon,
+  ShieldIcon,
 } from "lucide-react";
 import { Button } from "./ui/button";
 import Link from "next/link";
@@ -36,7 +37,7 @@ export const data = {
   },
   navMain: [
     {
-      title: "Dashboard",
+      title: "All Listings",
       url: "/dashboard",
       icon: <LayoutDashboardIcon />,
       requiresAuth: false,
@@ -58,6 +59,13 @@ export const data = {
       url: "/incoming-requests",
       icon: <InboxIcon />,
       requiresAuth: true,
+    },
+    {
+      title: "Admin",
+      url: "/admin",
+      icon: <ShieldIcon />,
+      requiresAuth: true,
+      requiresAdmin: true,
     },
   ],
 };

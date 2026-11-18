@@ -40,6 +40,7 @@ function toToolRow(t: ToolSource): ToolRow {
     status: t.status,
     createdAt: t.createdAt,
     ownerName: t.ownerName ?? null,
+    ownerTrusted: t.ownerTrusted ?? false,
     imageUrl: t.imageUrl ?? null,
   };
 }

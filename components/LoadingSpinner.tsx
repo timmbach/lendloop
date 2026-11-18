@@ -19,7 +19,7 @@ export default function LoadingSpinner({
 }: LoadingSpinnerProps) {
   return (
     <div
-      className={`flex flex-col items-center justify-center gap-3 ${className ?? ""}`}
+      className={`flex flex-col h-full items-center justify-center gap-3 ${className ?? ""}`}
     >
       <div className="animate-spin">
         <Image

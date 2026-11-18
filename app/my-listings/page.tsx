@@ -14,6 +14,9 @@ import { Button } from "@/components/ui/button";
 import { ListToolDialog } from "@/components/list-tool-dialog";
 import { CirclePlusIcon } from "lucide-react";
 import LoadingSpinner from "@/components/LoadingSpinner";
+import { useState } from "react";
+import { EditListingDialog } from "@/components/edit-listing-dialog";
+import { toast } from "sonner";
 
 const USE_DUMMY_DATA = false;
 
@@ -41,12 +44,14 @@ function toToolRow(t: ToolSource): ToolRow {
     status: t.status,
     createdAt: t.createdAt,
     ownerName: "Me",
+    ownerTrusted: false,
     imageUrl: t.imageUrl ?? null,
   };
 }
 
 export default function MyListingsPage() {
   const { isAuthenticated, isLoading } = useConvexAuth();
+  const [editing, setEditing] = useState<ToolRow | null>(null);
   const me = useQuery(api.users.getMe);
   const removeTool = useMutation(api.tools.deleteToolListing);
 
@@ -96,11 +101,29 @@ export default function MyListingsPage() {
           isAdmin={me?.role === "admin"}
           currentUserId={me?._id ?? null}
           enableSelection
-          onRemove={(row) => removeTool({ toolId: row.id })}
+          onEdit={(row) => setEditing(row)}
+          onRemove={async (row) => {
+            try {
+              await removeTool({ toolId: row.id });
+              toast.success("Listing removed");
+            } catch (err) {
+              toast.error(err instanceof Error ? err.message : "Failed");
+            }
+          }}
           renderDetails={(row) => <ToolDetails item={row} />}
           emptyMessage="You haven't listed any tools yet."
         />
       </div>
+      {editing && (
+        <EditListingDialog
+          key={editing.id}
+          tool={editing}
+          open
+          onOpenChange={(open) => {
+            if (!open) setEditing(null);
+          }}
+        />
+      )}
     </div>
   );
 }
