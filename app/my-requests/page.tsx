@@ -1,7 +1,6 @@
 "use client";
 
-import { useMutation, useQuery } from "convex/react";
-import { useConvexAuth } from "convex/react";
+import { useConvexAuth, useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { DataTable } from "@/components/data-table";
 import {
@@ -9,15 +8,11 @@ import {
   RequestDetails,
   type RequestRow,
 } from "@/components/requests-table";
-import dynamic from "next/dynamic";
-
-const LoadingSpinner = dynamic(() => import("@/components/LoadingSpinner"), {
-  loading: () => <p className="text-muted-foreground">Loading…</p>,
-});
+import LoadingSpinner from "@/components/LoadingSpinner";
 
 export default function MyRequestsPage() {
   const { isAuthenticated, isLoading } = useConvexAuth();
-  const me = useQuery(api.users.getMe);
+  const me = useQuery(api.users.getMe, {});
   const cancel = useMutation(api.loanRequests.cancelLoanRequest);
   const markReturned = useMutation(api.loanRequests.markReturned);
 

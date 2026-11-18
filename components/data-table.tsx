@@ -106,6 +106,11 @@ export type DataTableMeta<T extends BaseRow> = {
   currentUserId: string | null;
   onView: (row: T) => void;
   onRemove?: (row: T) => void;
+  onRequestBorrow?: (row: T) => void;
+  onApprove?: (row: T) => void;
+  onDecline?: (row: T) => void;
+  onMarkReturned?: (row: T) => void;
+  onCancel?: (row: T) => void;
 };
 
 export function DragHandle({ id }: { id: string }) {
@@ -199,6 +204,7 @@ export type DataTableProps<T extends BaseRow> = {
   renderDetails?: (row: T) => React.ReactNode;
   emptyMessage?: string;
   meta?: Record<string, unknown>;
+  onRequestBorrow?: (row: T) => void;
 };
 
 export function DataTable<T extends BaseRow>({
@@ -210,6 +216,7 @@ export function DataTable<T extends BaseRow>({
   enableSelection = false,
   onView,
   onRemove,
+  onRequestBorrow,
   renderDetails,
   emptyMessage = "No results.",
   meta,
@@ -270,6 +277,7 @@ export function DataTable<T extends BaseRow>({
       currentUserId,
       onView: handleView,
       onRemove,
+      onRequestBorrow,
       ...meta,
     },
     state: {

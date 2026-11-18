@@ -10,11 +10,10 @@ import {
   type ToolRow,
 } from "@/components/tools-table";
 import rawData from "../dashboard/data.json";
-import dynamic from "next/dynamic";
-
-const LoadingSpinner = dynamic(() => import("@/components/LoadingSpinner"), {
-  loading: () => <p className="text-muted-foreground">Loading…</p>,
-});
+import { Button } from "@/components/ui/button";
+import { ListToolDialog } from "@/components/list-tool-dialog";
+import { CirclePlusIcon } from "lucide-react";
+import LoadingSpinner from "@/components/LoadingSpinner";
 
 const USE_DUMMY_DATA = false;
 
@@ -77,6 +76,15 @@ export default function MyListingsPage() {
           <p className="text-muted-foreground">
             Manage the tools you&apos;ve shared.
           </p>
+        </div>
+
+        <div className="flex justify-center">
+          <ListToolDialog>
+            <Button>
+              <CirclePlusIcon />
+              List a tool
+            </Button>
+          </ListToolDialog>
         </div>
       </div>
 

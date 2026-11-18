@@ -120,12 +120,17 @@ export const toolColumns: DataTableColumn<ToolRow>[] = columnHelper.columns([
 
       const handleView = meta.onView;
       const handleRemove = meta.onRemove;
+      const handleRequestBorrow = meta.onRequestBorrow;
+
       const isOwner =
         meta.currentUserId !== null &&
         row.original.ownerId === meta.currentUserId;
-      const canRemove = !!handleRemove && (meta.isAdmin || isOwner);
+      const isAvailable = row.original.status === "available";
 
-      if (!handleView && !canRemove) return null;
+      const canRemove = !!handleRemove && (meta.isAdmin || isOwner);
+      const canRequest = !!handleRequestBorrow && !isOwner && isAvailable;
+
+      if (!handleView && !canRemove && !canRequest) return null;
 
       return (
         <DropdownMenu>
@@ -141,10 +146,17 @@ export const toolColumns: DataTableColumn<ToolRow>[] = columnHelper.columns([
             <EllipsisVerticalIcon />
             <span className="sr-only">Open menu</span>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-40">
+          <DropdownMenuContent align="end" className="w-48">
             {handleView && (
               <DropdownMenuItem onClick={() => handleView(row.original)}>
                 View details
+              </DropdownMenuItem>
+            )}
+            {canRequest && (
+              <DropdownMenuItem
+                onClick={() => handleRequestBorrow(row.original)}
+              >
+                Request to borrow
               </DropdownMenuItem>
             )}
             {canRemove && (
@@ -165,9 +177,17 @@ export const toolColumns: DataTableColumn<ToolRow>[] = columnHelper.columns([
   }),
 ]);
 
-export function ToolDetails({ item }: { item: ToolRow }) {
+export function ToolDetails({
+  item,
+  canRequest,
+  onRequestBorrow,
+}: {
+  item: ToolRow;
+  canRequest?: boolean;
+  onRequestBorrow?: () => void;
+}) {
   return (
-    <div className="py-6">
+    <>
       <div className="px-4">
         <h3 className="text-lg font-semibold">{item.name}</h3>
         <p className="text-sm text-muted-foreground">
@@ -175,7 +195,6 @@ export function ToolDetails({ item }: { item: ToolRow }) {
           {new Date(item.createdAt).toLocaleDateString()}
         </p>
       </div>
-
       <div className="flex flex-col gap-4 overflow-y-auto px-4 text-sm">
         {item.imageUrl && (
           <div className="relative aspect-video w-full overflow-hidden rounded-md border">
@@ -183,23 +202,25 @@ export function ToolDetails({ item }: { item: ToolRow }) {
               src={item.imageUrl}
               alt={item.name}
               fill
-              sizes="(max-width: 768px) 100vw, 480px"
               className="object-cover"
+              sizes="(max-width: 768px) 100vw, 480px"
             />
           </div>
         )}
-
         <p>{item.description}</p>
-
         <div className="flex items-center gap-2">
           <span className="text-muted-foreground">Owner:</span>
           <span>{item.ownerName ?? "—"}</span>
         </div>
-
         <Badge variant="outline" className="w-fit capitalize">
           {item.status}
         </Badge>
+        {canRequest && onRequestBorrow && (
+          <Button onClick={onRequestBorrow} className="w-full">
+            Request to borrow
+          </Button>
+        )}
       </div>
-    </div>
+    </>
   );
 }

@@ -9,10 +9,12 @@ import {
   toolColumns,
   type ToolRow,
 } from "@/components/tools-table";
-import rawData from "./data.json";
-import dynamic from "next/dynamic";
-
-const USE_DUMMY_DATA = true; // flip to false when Convex is ready
+import { Button } from "@/components/ui/button";
+import { ListToolDialog } from "@/components/list-tool-dialog";
+import { CirclePlusIcon } from "lucide-react";
+import { useState } from "react";
+import { RequestToolDialog } from "@/components/request-tool-dialog";
+import LoadingSpinner from "@/components/LoadingSpinner";
 
 type ToolSource = {
   _id: Id<"tools">;
@@ -42,24 +44,15 @@ function toToolRow(t: ToolSource): ToolRow {
   };
 }
 
-const LoadingSpinner = dynamic(() => import("@/components/LoadingSpinner"), {
-  loading: () => <p className="text-muted-foreground">Loading…</p>,
-});
-
 export default function DashboardPage() {
   const { isAuthenticated, isLoading } = useConvexAuth();
   const me = useQuery(api.users.getMe);
+  const [requestTool, setRequestTool] = useState<ToolRow | null>(null);
+  const openRequestDialog = (row: ToolRow) => setRequestTool(row);
 
-  const toolsFromConvex = useQuery(
-    api.tools.getAllToolListings,
-    USE_DUMMY_DATA ? "skip" : {},
-  );
+  const tools = useQuery(api.tools.getAllToolListings, {});
 
-  const source: ToolSource[] | undefined = USE_DUMMY_DATA
-    ? (rawData as ToolSource[])
-    : toolsFromConvex;
-
-  if (isLoading || source === undefined)
+  if (isLoading || tools === undefined)
     return (
       <LoadingSpinner width={48} height={48} message="Loading listings..." />
     );
@@ -67,25 +60,53 @@ export default function DashboardPage() {
   return (
     <div className="@container/main flex flex-1 flex-col gap-2">
       <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
-        <div className="flex items-center justify-between px-4 lg:px-6">
-          <div>
-            <h1 className="text-2xl font-bold">Listings Dashboard</h1>
-            <p className="text-muted-foreground">
-              Browse tools shared on LendLoop
-            </p>
-          </div>
+        <div className="px-4 lg:px-6">
+          <h1 className="text-2xl font-bold">Available Tools</h1>
+          <p className="text-muted-foreground">
+            Browse tools shared by everyone.
+          </p>
         </div>
+
+        {isAuthenticated && (
+          <div className="flex justify-center">
+            <ListToolDialog>
+              <Button>
+                <CirclePlusIcon />
+                List a tool
+              </Button>
+            </ListToolDialog>
+          </div>
+        )}
       </div>
 
       <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
         <DataTable
-          data={source.map(toToolRow)}
+          data={tools.map(toToolRow)}
           columns={toolColumns}
           isAuthenticated={isAuthenticated}
           isAdmin={me?.role === "admin"}
           currentUserId={me?._id ?? null}
-          renderDetails={(row) => <ToolDetails item={row} />}
+          renderDetails={(row) => (
+            <ToolDetails
+              item={row}
+              canRequest={
+                isAuthenticated &&
+                !!me?._id &&
+                row.ownerId !== me._id &&
+                row.status === "available"
+              }
+              onRequestBorrow={() => openRequestDialog(row)}
+            />
+          )}
           emptyMessage="No tools listed yet."
+        />
+        <RequestToolDialog
+          toolId={requestTool?.id ?? null}
+          toolName={requestTool?.name ?? null}
+          open={!!requestTool}
+          onOpenChange={(open) => {
+            if (!open) setRequestTool(null);
+          }}
         />
       </div>
     </div>

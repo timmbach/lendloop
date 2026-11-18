@@ -170,6 +170,16 @@ export const getAllToolListings = query({
     const identity = await ctx.auth.getUserIdentity();
     const isAuthenticated = identity !== null;
 
+    // Resolve the current user's _id (only when authenticated)
+    let currentUserId: Id<"users"> | null = null;
+    if (isAuthenticated) {
+      const me = await ctx.db
+        .query("users")
+        .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
+        .first();
+      currentUserId = me?._id ?? null;
+    }
+
     const [available, unavailable] = await Promise.all([
       ctx.db
         .query("tools")
@@ -183,12 +193,16 @@ export const getAllToolListings = query({
 
     const all = [...available, ...unavailable];
 
-    const visible = args.category
-      ? all.filter((t) => t.category === args.category)
+    // Exclude the signed-in user's own tools
+    const notMine = currentUserId
+      ? all.filter((t) => t.ownerId !== currentUserId)
       : all;
 
+    const visible = args.category
+      ? notMine.filter((t) => t.category === args.category)
+      : notMine;
+
     if (!isAuthenticated) {
-      // Anonymous: no owner identity, no image
       return visible.map((t) => ({
         ...t,
         ownerName: null,

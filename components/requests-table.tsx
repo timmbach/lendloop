@@ -128,8 +128,7 @@ export function buildRequestColumns(
     columnHelper.display({
       id: "actions",
       cell: ({ row, table }) => {
-        const meta = table.options.meta as DataTableMeta<RequestRow> &
-          RequestMeta;
+        const meta = table.options.meta as DataTableMeta<RequestRow>;
         if (!meta.isAuthenticated) return null;
 
         const r = row.original;
@@ -147,7 +146,8 @@ export function buildRequestColumns(
 
         const canApprove = !!handleApprove && isOwner && isPending;
         const canDecline = !!handleDecline && isOwner && isPending;
-        const canMarkReturned = !!handleMarkReturned && isOwner && isApproved;
+        const canMarkReturned =
+          !!handleMarkReturned && (isOwner || isBorrower) && isApproved;
         const canCancel = !!handleCancel && isBorrower && isPending;
 
         const hasAny = canApprove || canDecline || canMarkReturned || canCancel;
@@ -167,7 +167,7 @@ export function buildRequestColumns(
               <EllipsisVerticalIcon />
               <span className="sr-only">Open menu</span>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-40">
+            <DropdownMenuContent align="end" className="w-44">
               {canApprove && (
                 <DropdownMenuItem onClick={() => handleApprove(r)}>
                   Approve

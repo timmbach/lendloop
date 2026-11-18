@@ -1,6 +1,6 @@
 "use client";
 
-import { useMutation, useQuery, useConvexAuth } from "convex/react";
+import { useConvexAuth, useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { DataTable } from "@/components/data-table";
 import {
@@ -8,15 +8,12 @@ import {
   RequestDetails,
   type RequestRow,
 } from "@/components/requests-table";
-import dynamic from "next/dynamic";
-
-const LoadingSpinner = dynamic(() => import("@/components/LoadingSpinner"), {
-  loading: () => <p className="text-muted-foreground">Loading…</p>,
-});
+import { toast } from "sonner";
+import LoadingSpinner from "@/components/LoadingSpinner";
 
 export default function IncomingRequestsPage() {
   const { isAuthenticated, isLoading } = useConvexAuth();
-  const me = useQuery(api.users.getMe);
+  const me = useQuery(api.users.getMe, {});
   const approveDecline = useMutation(
     api.loanRequests.approveDeclineLoanRequest,
   );
@@ -26,31 +23,11 @@ export default function IncomingRequestsPage() {
     api.loanRequests.getIncomingRequests,
     isAuthenticated ? {} : "skip",
   );
+
   if (isLoading || requests === undefined)
     return (
-      <LoadingSpinner
-        width={48}
-        height={48}
-        message="Loading incoming requests..."
-      />
+      <LoadingSpinner width={48} height={48} message="Loading requests..." />
     );
-
-  // import dynamic from "next/dynamic";
-
-  // const LoadingSpinner = dynamic(() => import("@/components/LoadingSpinner"), {
-  //   loading: () => <p className="text-muted-foreground">Loading…</p>,
-  // });
-
-  // if (loading) {
-  //   return (
-  //     <LoadingSpinner
-  //       src="/xcode_logo.png"
-  //       width={48}
-  //       height={48}
-  //       message="Loading your tools…"
-  //     />
-  //   );
-  // }
 
   const rows: RequestRow[] = requests.map((r) => ({
     id: r._id,
@@ -69,7 +46,7 @@ export default function IncomingRequestsPage() {
 
   return (
     <div className="@container/main flex flex-1 flex-col gap-2">
-      <div className="flex flex-col gap-4 py-4 md: gap-6 md:py-6">
+      <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
         <div className="px-4 lg:px-6">
           <h1 className="text-2xl font-bold">Incoming Requests</h1>
           <p className="text-muted-foreground">
@@ -85,12 +62,44 @@ export default function IncomingRequestsPage() {
           enableSelection
           renderDetails={(row) => <RequestDetails item={row} />}
           meta={{
-            onApprove: (row: RequestRow) =>
-              approveDecline({ loanRequestId: row.id, status: "approved" }),
-            onDecline: (row: RequestRow) =>
-              approveDecline({ loanRequestId: row.id, status: "declined" }),
-            onMarkReturned: (row: RequestRow) =>
-              markReturned({ loanRequestId: row.id }),
+            onApprove: async (row: RequestRow) => {
+              try {
+                await approveDecline({
+                  loanRequestId: row.id,
+                  status: "approved",
+                });
+                toast.success("Request approved");
+              } catch (err) {
+                toast.error(
+                  err instanceof Error ? err.message : "Failed to approve",
+                );
+              }
+            },
+            onDecline: async (row: RequestRow) => {
+              try {
+                await approveDecline({
+                  loanRequestId: row.id,
+                  status: "declined",
+                });
+                toast.success("Request declined");
+              } catch (err) {
+                toast.error(
+                  err instanceof Error ? err.message : "Failed to decline",
+                );
+              }
+            },
+            onMarkReturned: async (row: RequestRow) => {
+              try {
+                await markReturned({ loanRequestId: row.id });
+                toast.success("Marked as returned");
+              } catch (err) {
+                toast.error(
+                  err instanceof Error
+                    ? err.message
+                    : "Failed to mark returned",
+                );
+              }
+            },
           }}
           emptyMessage="No incoming requests yet."
         />
