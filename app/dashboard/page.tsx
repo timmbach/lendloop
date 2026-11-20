@@ -26,6 +26,7 @@ type ToolSource = {
   status: Doc<"tools">["status"];
   createdAt: number;
   ownerName?: string | null;
+  ownerTrusted?: boolean;
   imageUrl?: string | null;
 };
 

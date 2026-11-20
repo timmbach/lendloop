@@ -3,6 +3,7 @@ import { v } from "convex/values";
 import { requireAuth, requireAdmin } from "./authz";
 import { QueryCtx, MutationCtx } from "./_generated/server";
 import { Id, Doc } from "./_generated/dataModel";
+import { internal } from "./_generated/api";
 
 type Ctx = QueryCtx | MutationCtx;
 
@@ -58,6 +59,18 @@ export const createLoanRequest = mutation({
       status: "pending",
       createdAt: Date.now(),
     });
+
+    const owner = await ctx.db.get(tool.ownerId);
+    await ctx.scheduler.runAfter(0, internal.n8n.notifyN8n, {
+      event: "created",
+      toolName: tool.name,
+      status: "pending",
+      recipientEmail: owner?.email ?? "",
+      recipientName: owner?.name ?? "Tool owner",
+      actorName: borrower.name ?? "Someone",
+      startDate: args.startDate,
+      endDate: args.endDate,
+    });
   },
 });
 
@@ -87,6 +100,21 @@ export const approveDeclineLoanRequest = mutation({
     if (args.status === "approved") {
       await ctx.db.patch(loan.toolId, { status: "unavailable" });
     }
+
+    const tool = await ctx.db.get(loan.toolId);
+    const borrower = await ctx.db.get(loan.borrowerId);
+    const owner = await ctx.db.get(loan.ownerId);
+
+    await ctx.scheduler.runAfter(0, internal.n8n.notifyN8n, {
+      event: "status_changed",
+      toolName: tool?.name ?? "Tool",
+      status: args.status,
+      recipientEmail: borrower?.email ?? "",
+      recipientName: borrower?.name ?? "Borrower",
+      actorName: owner?.name ?? "Owner",
+      startDate: loan.startDate,
+      endDate: loan.endDate,
+    });
   },
 });
 
@@ -119,6 +147,22 @@ export const markReturned = mutation({
 
     // Tool becomes available again
     await ctx.db.patch(loan.toolId, { status: "available" });
+
+    const tool = await ctx.db.get(loan.toolId);
+    const borrower = await ctx.db.get(loan.borrowerId);
+    const owner = await ctx.db.get(loan.ownerId);
+
+    // Notify the owner that their tool is back; the borrower already knows
+    await ctx.scheduler.runAfter(0, internal.n8n.notifyN8n, {
+      event: "status_changed",
+      toolName: tool?.name ?? "Tool",
+      status: "returned",
+      recipientEmail: owner?.email ?? "",
+      recipientName: owner?.name ?? "Owner",
+      actorName: borrower?.name ?? "Borrower",
+      startDate: loan.startDate,
+      endDate: loan.endDate,
+    });
   },
 });
 
