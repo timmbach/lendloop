@@ -10,6 +10,7 @@
 
 import type * as authz from "../authz.js";
 import type * as http from "../http.js";
+import type * as lib_verifyHmac from "../lib/verifyHmac.js";
 import type * as loanRequests from "../loanRequests.js";
 import type * as n8n from "../n8n.js";
 import type * as tools from "../tools.js";
@@ -24,6 +25,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   authz: typeof authz;
   http: typeof http;
+  "lib/verifyHmac": typeof lib_verifyHmac;
   loanRequests: typeof loanRequests;
   n8n: typeof n8n;
   tools: typeof tools;

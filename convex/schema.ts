@@ -37,7 +37,7 @@ export default defineSchema({
   loanRequests: defineTable({
     toolId: v.id("tools"),
     borrowerId: v.id("users"),
-    ownerId: v.id("users"), // denormalized: the tool owner / lender
+    ownerId: v.id("users"),
     startDate: v.number(), // Unix ms
     endDate: v.number(), // Unix ms
     status: v.union(
@@ -48,10 +48,19 @@ export default defineSchema({
       v.literal("cancelled"),
     ),
     createdAt: v.number(),
-    returnedAt: v.optional(v.number()), // set when marked returned
+    returnedAt: v.optional(v.number()),
+    lastReminderAt: v.optional(v.number()),
   })
     .index("by_tool", ["toolId"])
     .index("by_borrower", ["borrowerId"])
     .index("by_owner", ["ownerId"])
     .index("by_status", ["status"]),
+
+  reminders: defineTable({
+    loanRequestId: v.id("loanRequests"),
+    sentAt: v.number(),
+    channel: v.optional(v.string()), // "email", "slack", etc.
+  })
+    .index("by_loanRequest", ["loanRequestId"])
+    .index("by_loanRequest_and_sentAt", ["loanRequestId", "sentAt"]),
 });

@@ -1,4 +1,9 @@
-import { mutation, query } from "./_generated/server";
+import {
+  internalMutation,
+  internalQuery,
+  mutation,
+  query,
+} from "./_generated/server";
 import { v } from "convex/values";
 import { requireAuth, requireAdmin } from "./authz";
 import { QueryCtx, MutationCtx } from "./_generated/server";
@@ -241,5 +246,60 @@ export const listAllForAdmin = query({
         ...(await withNames(ctx, r)),
       })),
     );
+  },
+});
+
+// n8n related internal functions
+export const getOverdue = internalQuery({
+  args: { now: v.number() },
+  handler: async (ctx, args) => {
+    const approved = await ctx.db
+      .query("loanRequests")
+      .withIndex("by_status", (q) => q.eq("status", "approved"))
+      .collect();
+
+    const overdue = approved.filter((r) => r.endDate < args.now);
+
+    return await Promise.all(
+      overdue.map(async (r) => {
+        const [borrower, tool] = await Promise.all([
+          ctx.db.get(r.borrowerId),
+          ctx.db.get(r.toolId),
+        ]);
+        return {
+          loanRequestId: r._id,
+          borrowerEmail: borrower?.email ?? "",
+          borrowerName: borrower?.name ?? "Borrower",
+          toolName: tool?.name ?? "Tool",
+          endDate: r.endDate,
+        };
+      }),
+    );
+  },
+});
+
+export const markReminderSent = internalMutation({
+  args: { loanRequestId: v.id("loanRequests") },
+  handler: async (ctx, args) => {
+    const loan = await ctx.db.get(args.loanRequestId);
+    if (!loan) return;
+
+    // Idempotency: check if a reminder was sent for this loan in the last 20h.
+    // The compound index makes this a single indexed lookup.
+    const twentyHoursAgo = Date.now() - 20 * 60 * 60 * 1000;
+    const recent = await ctx.db
+      .query("reminders")
+      .withIndex("by_loanRequest_and_sentAt", (q) =>
+        q.eq("loanRequestId", args.loanRequestId).gte("sentAt", twentyHoursAgo),
+      )
+      .first();
+
+    if (recent) return; // already reminded recently — skip
+
+    await ctx.db.insert("reminders", {
+      loanRequestId: args.loanRequestId,
+      sentAt: Date.now(),
+      channel: "email",
+    });
   },
 });

@@ -179,17 +179,75 @@ export const upsertFromClerk = internalMutation({
   },
 });
 
-// Called by webhook: delete user
+// Called by webhook: delete user (user has already been deleted from clerk via the UserButton frontend component)
 export const deleteFromClerk = internalMutation({
   args: { clerkUserId: v.string() },
+
   handler: async (ctx, { clerkUserId }) => {
     const user = await ctx.db
       .query("users")
       .withIndex("by_clerk_id", (q) => q.eq("clerkId", clerkUserId))
       .first();
-    if (user) {
-      // Recommendation: soft delete or clean up associated data, example here is hard delete
-      await ctx.db.delete(user._id);
+
+    if (!user) {
+      return;
     }
+
+    // 1. Find all tools owned by this user
+    const tools = await ctx.db
+      .query("tools")
+      .withIndex("by_owner", (q) => q.eq("ownerId", user._id))
+      .collect();
+
+    // 2. Collect tool IDs and delete associated images
+    const toolIds = new Set(tools.map((tool) => tool._id));
+
+    for (const tool of tools) {
+      await ctx.storage.delete(tool.imageId);
+      await ctx.db.delete(tool._id);
+    }
+
+    // 3. Find loan requests where the user is the borrower
+    const borrowerRequests = await ctx.db
+      .query("loanRequests")
+      .withIndex("by_borrower", (q) => q.eq("borrowerId", user._id))
+      .collect();
+
+    // 4. Find loan requests where the user is the owner
+    const ownerRequests = await ctx.db
+      .query("loanRequests")
+      .withIndex("by_owner", (q) => q.eq("ownerId", user._id))
+      .collect();
+
+    // 5. Collect requests associated with the user's tools
+    const toolRequests = [];
+
+    for (const toolId of toolIds) {
+      const requests = await ctx.db
+        .query("loanRequests")
+        .withIndex("by_tool", (q) => q.eq("toolId", toolId))
+        .collect();
+
+      toolRequests.push(...requests);
+    }
+
+    // 6. Deduplicate requests
+    const allRequests = new Map();
+
+    for (const request of [
+      ...borrowerRequests,
+      ...ownerRequests,
+      ...toolRequests,
+    ]) {
+      allRequests.set(request._id, request);
+    }
+
+    // 7. Delete all associated loan requests
+    for (const request of allRequests.values()) {
+      await ctx.db.delete(request._id);
+    }
+
+    // 8. Delete the user
+    await ctx.db.delete(user._id);
   },
 });
